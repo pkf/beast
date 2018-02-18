@@ -1,10 +1,10 @@
-package main
+package util
 
 import (
 	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"time"
 )
 
@@ -24,7 +24,7 @@ func JsonString(t interface{}) string {
 }
 
 func JsonByte(t interface{}) []byte {
-	str := js(t)
+	str := JsonString(t)
 	return []byte(str)
 }
 

@@ -1,4 +1,4 @@
-package main
+package util
 
 import "errors"
 
@@ -29,7 +29,7 @@ func dtoi(s string, i0 int) (n int, i int, ok bool) {
 	return n, i, true
 }
 
-func parseIPv4(s string) ([IPv4len]byte, error) {
+func ParseIPv4(s string) ([IPv4len]byte, error) {
 	var p [IPv4len]byte
 	i := 0
 	for j := 0; j < IPv4len; j++ {
@@ -59,7 +59,7 @@ func parseIPv4(s string) ([IPv4len]byte, error) {
 	return p, nil
 }
 
-func parsePort(port string) (int, error) {
+func ParsePort(port string) (int, error) {
 	p, i, ok := dtoi(port, 0)
 	if !ok || i != len(port) {
 		return 0, errors.New("invalid port 1")

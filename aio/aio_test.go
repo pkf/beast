@@ -2,10 +2,10 @@ package aio
 
 import (
 	"bytes"
-	"os"
-	"testing"
 	"fmt"
+	"os"
 	"reflect"
+	"testing"
 )
 
 func TestAIO(t *testing.T) {

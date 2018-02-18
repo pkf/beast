@@ -1,6 +1,7 @@
 package main
 
 import (
+	"beast/util"
 	"errors"
 	"fmt"
 	"strings"
@@ -105,13 +106,13 @@ func (s *TcpServer) CreateListenSocket(ipport string) (int, error) {
 		return 0, errors.New("invalid ipport")
 	}
 
-	ip, err := parseIPv4(ipinfo[0])
+	ip, err := util.ParseIPv4(ipinfo[0])
 	if err != nil {
 		fmt.Println("TcpServer parseIPv4 failed")
 		return 0, errors.New("invalid ip")
 	}
 
-	port, err := parsePort(ipinfo[1])
+	port, err := util.ParsePort(ipinfo[1])
 	if err != nil {
 		fmt.Println("TcpServer parsePort failed")
 		return 0, err
@@ -128,7 +129,7 @@ func (s *TcpServer) CreateListenSocket(ipport string) (int, error) {
 		return 0, err
 	}
 
-	err = syscall.Listen(socket, ACCEPT_CHAN_LEN)
+	err = syscall.Listen(socket, util.ACCEPT_CHAN_LEN)
 	if err != nil {
 		fmt.Println("TcpServer listen failed")
 		return 0, err
