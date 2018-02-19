@@ -8,9 +8,7 @@ import (
 	"syscall"
 )
 
-var (
-	Server *TcpServer
-)
+var Server *TcpServer
 
 type ConnInfo interface {
 }

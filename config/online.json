@@ -1,7 +1,8 @@
 {
-	"RedisHost": "127.0.0.1:6379",
-	"RedisDb": 4,
-	"MysqlHost": "screenshotweb:screenshot2014@tcp(127.0.0.1:3310)/screenshot_personal?charset=utf8",
-	"IconUrl": "/user/icon/",		
-	"Host": "www.awesomescreenshot.com"				    
+	"ServerHost": "127.0.0.1:9999",
+	"EnableSSL": 0,
+	"Mode": "thread", //thread, fork		
+	"MaxSocketNum": 10240,
+	"CheckTimeoutTs": 3,	
+	"TimeoutTs":60,		    
 }
