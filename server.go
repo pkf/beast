@@ -10,9 +10,6 @@ import (
 
 var Server *TcpServer
 
-type ConnInfo interface {
-}
-
 func InitServer(maxSocketNum, checkTimeoutTs int, timeoutTs int, addr string) {
 	Server = NewTcpServer(maxSocketNum, checkTimeoutTs, timeoutTs, addr)
 	Server.Start()
