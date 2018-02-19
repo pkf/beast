@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"testing"
 )
 
-func main() {
-	fmt.Println("begin")
+func TestSlice(t *testing.T) {
+	t.Log("begin")
 	a := make([]byte, 100)
 	b := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9}
 
@@ -25,5 +26,5 @@ func main() {
 	a = append(a, b...)
 	fmt.Println(a)
 
-	fmt.Println("end")
+	t.Log("end")
 }
