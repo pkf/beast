@@ -1,12 +1,14 @@
 package main
 
 import (
-	//"beast/global"
+	"beast/global"
+	"fmt"
 	"net/http"
 	"net/http/pprof"
 )
 
 func main() {
+	fmt.Println("Config:", global.Config)
 	//pprof
 	go func() {
 		profServeMux := http.NewServeMux()

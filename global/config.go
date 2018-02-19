@@ -2,6 +2,7 @@ package global
 
 import (
 	"encoding/json"
+	_ "fmt"
 	"os"
 )
 
@@ -16,11 +17,13 @@ func LoadConfig(filename string) (Configuration, error) {
 	var config = Configuration{}
 	file, err := os.Open(filename)
 	if err != nil {
+		panic(err)
 		return config, err
 	}
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(&config)
 	if err != nil {
+		panic(err)
 		return config, err
 	}
 	return config, nil

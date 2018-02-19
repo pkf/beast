@@ -1,8 +1,8 @@
 {
 	"ServerHost": "127.0.0.1:9999",
 	"EnableSSL": 0,
-	"Mode": "thread", //thread, fork		
+	"Mode": "thread",
 	"MaxSocketNum": 10240,
 	"CheckTimeoutTs": 3,	
-	"TimeoutTs":60,		    
+	"TimeoutTs":60  
 }
