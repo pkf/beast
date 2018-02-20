@@ -17,6 +17,9 @@ type SocketInfo struct {
 	WriteMutex     sync.Mutex //保护写缓冲区
 }
 
+type Event struct {
+}
+
 type NotifyEvent struct {
 	Type int //1.accept  2.write 3.close
 	Info *SocketInfo
@@ -25,7 +28,7 @@ type NotifyEvent struct {
 type IoThread struct {
 	Index int
 	//EventList        []syscall.EpollEvent
-	EventList        []interface{}
+	EventList        []Event
 	NotifyList       []*NotifyEvent
 	NotifyMutex      sync.Mutex
 	NotifyWriteBytes [8]byte

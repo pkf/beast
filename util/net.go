@@ -4,10 +4,6 @@ import "errors"
 
 const (
 	IPv4len = 4
-
-	ACCEPT_CHAN_LEN = 10240
-	READ_BUFFER_LEN = 8192   //读缓冲区默认大小
-	MAX_PACK_LEN    = 102400 //最大包长
 )
 
 type FD int

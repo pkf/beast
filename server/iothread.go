@@ -1,6 +1,7 @@
 package server
 
 import (
+	"beast/aio"
 	"beast/global"
 	"errors"
 	"log"
@@ -18,7 +19,7 @@ func NewIoThread(o *TcpServer, index int) *IoThread {
 	return &IoThread{
 		Index:            index,
 		Owner:            o,
-		EventList:        make([]syscall.EpollEvent, int(o.MaxSocketNum/o.IoThreadNum)+1),
+		EventList:        make([]Event, int(o.MaxSocketNum/o.IoThreadNum)+1),
 		NotifyList:       []*NotifyEvent{},
 		NotifyMutex:      sync.Mutex{},
 		ReadTmpBuffer:    make([]byte, global.READ_BUFFER_LEN),
@@ -28,20 +29,21 @@ func NewIoThread(o *TcpServer, index int) *IoThread {
 }
 
 func (s *IoThread) Start() error {
-	var err error
-	s.EpollFd, err = syscall.EpollCreate(s.Owner.MaxSocketNum)
+	//s.EpollFd, err = syscall.EpollCreate(s.Owner.MaxSocketNum)
+	pollFd, err := aio.NewPoller(s.Owner.MaxSocketNum)
 	if err != nil {
 		log.Println("IoThread EpollCreate failed")
 		return err
 	}
-	//log.Println("s.EpollFd=%d", s.EpollFd)
+	s.EpollFd = int(pollFd)
+
 	r1, _, errn := syscall.Syscall(284, 0, 0, 0)
 	if errn != 0 {
 		log.Println("SYS_EVENTFD failed,IoThread exit,errn=%d", errn)
 		return nil
 	}
 	s.NotifyFd = int(r1)
-	//log.Println("s.NotifyFd=%d", s.NotifyFd)
+
 	syscall.SetNonblock(s.NotifyFd, true)
 	err = EpollAddFd(s.EpollFd, s.NotifyFd, syscall.EPOLLIN|syscall.EPOLLERR)
 	if err != nil {
