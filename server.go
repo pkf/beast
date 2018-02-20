@@ -1,6 +1,7 @@
 package main
 
 import (
+	. "beast/global"
 	_ "beast/global"
 	"beast/util"
 	"errors"

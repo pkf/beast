@@ -1,6 +1,7 @@
 package main
 
 import (
+	. "beast/global"
 	"errors"
 	"log"
 	"syscall"
