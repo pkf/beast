@@ -1,6 +1,7 @@
 package server
 
 import (
+	"beast/global"
 	"beast/util"
 	"errors"
 	"log"
@@ -68,7 +69,7 @@ func (s *TcpServer) Start() error {
 		socketInfo := NewSocketInfo(fd, id, addr)
 		ioIndex := fd % s.IoThreadNum
 		log.Println("Accept fd=%d,id:%d,ioIndex=%d,addr=%+v,err=%+v", fd, id, ioIndex, addr, err)
-		s.IoThreadList[ioIndex].Notify(EVENT_ACCEPT, socketInfo)
+		s.IoThreadList[ioIndex].Notify(global.EVENT_ACCEPT, socketInfo)
 	}
 
 	return nil
@@ -151,7 +152,7 @@ func (s *TcpServer) CreateListenSocket(ipport string) (int, error) {
 		return 0, err
 	}
 
-	err = syscall.Listen(socket, util.ACCEPT_CHAN_LEN)
+	err = syscall.Listen(socket, global.ACCEPT_CHAN_LEN)
 	if err != nil {
 		log.Println("TcpServer listen failed")
 		return 0, err

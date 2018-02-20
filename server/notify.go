@@ -1,6 +1,8 @@
 package server
 
 import (
+	"beast/aio"
+	"beast/global"
 	"errors"
 	"log"
 	"syscall"
@@ -23,7 +25,7 @@ func (s *IoThread) handleAcceptEvent(socketInfo *SocketInfo) error {
 		return err
 	}
 
-	err = EpollAddFd(s.EpollFd, socketInfo.Fd, syscall.EPOLLIN|syscall.EPOLLERR)
+	err = aio.Poller(s.EpollFd).Add(socketInfo.Fd, aio.In|aio.Err)
 	if err != nil {
 		log.Println("IoThread HandleAccept EpollAddFd failed,err=%s", err.Error())
 		syscall.Close(socketInfo.Fd)
@@ -44,7 +46,7 @@ func (s *IoThread) handleWriteEvent(socketInfo *SocketInfo) error {
 		log.Println("HandleWriteEvent CheckSocketInfo failed")
 		return errors.New("CheckSocketInfo failed")
 	}
-	err := EpollModFd(s.EpollFd, socketInfo.Fd, syscall.EPOLLIN|syscall.EPOLLERR|syscall.EPOLLOUT)
+	err := aio.Poller(s.EpollFd).Add(socketInfo.Fd, aio.In|aio.Out|aio.Err)
 	if err != nil {
 		log.Println("HandleWriteEvent EpollModFd failed,fd=%d,err=%s", socketInfo.Fd, err.Error())
 		s.closeConn(socketInfo.Fd)
@@ -72,11 +74,11 @@ func (s *IoThread) handleNotify() {
 		s.NotifyList = []*NotifyEvent{} //置空
 		s.NotifyMutex.Unlock()
 		for _, v := range nl {
-			if v.Type == EVENT_ACCEPT {
+			if v.Type == global.EVENT_ACCEPT {
 				s.handleAcceptEvent(v.Info)
-			} else if v.Type == EVENT_WRITE {
+			} else if v.Type == global.EVENT_WRITE {
 				s.handleWriteEvent(v.Info)
-			} else if v.Type == EVENT_CLOSE {
+			} else if v.Type == global.EVENT_CLOSE {
 				s.handleCloseEvent(v.Info)
 			}
 		}

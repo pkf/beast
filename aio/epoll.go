@@ -32,7 +32,7 @@ func (p poller) Add(fd int, flags Flags) error {
 		ev.events |= C.EPOLLOUT
 	}
 	if flags&OneShot != 0 {
-		ev.events |= C.EPOLLONESHOT
+		ev.events |= C.EPOLLONESHOT //EPOLLERR
 	}
 	var dataFd = (*C.int)(unsafe.Pointer(&ev.data))
 	*dataFd = C.int(fd)

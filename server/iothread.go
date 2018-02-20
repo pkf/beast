@@ -30,7 +30,7 @@ func NewIoThread(o *TcpServer, index int) *IoThread {
 
 func (s *IoThread) Start() error {
 	//s.EpollFd, err = syscall.EpollCreate(s.Owner.MaxSocketNum)
-	pollFd, err := aio.NewPoller(s.Owner.MaxSocketNum)
+	pollFd, err := aio.NewPoller()
 	if err != nil {
 		log.Println("IoThread EpollCreate failed")
 		return err
@@ -45,7 +45,7 @@ func (s *IoThread) Start() error {
 	s.NotifyFd = int(r1)
 
 	syscall.SetNonblock(s.NotifyFd, true)
-	err = EpollAddFd(s.EpollFd, s.NotifyFd, syscall.EPOLLIN|syscall.EPOLLERR)
+	err = pollFd.Add(s.NotifyFd, aio.In|aio.Err)
 	if err != nil {
 		log.Println("IoThread  EpollAddFd NotifyFd failed,err=%s", err.Error())
 		syscall.Close(s.NotifyFd)
@@ -71,7 +71,7 @@ func (s *IoThread) Start() error {
 				lastCheck = time.Now()
 			}
 
-			nEvents, err := syscall.EpollWait(s.EpollFd, s.EventList, ts)
+			nEvents, err := pollFd.Wait(time.Duration(ts) * time.Millisecond)
 			if err != nil {
 				log.Println("IoThread EpollWait failed,err=%s", err.Error())
 				continue
@@ -80,13 +80,13 @@ func (s *IoThread) Start() error {
 			//nEvents := 0
 			//log.Println("loop2,nEvents=%d,s.EpollFd=%d", nEvents, s.EpollFd)
 
-			if nEvents > 0 {
+			if len(nEvents) > 0 {
 				lastNotify = time.Now()
 			}
 
 			b_handle_notify = false
-			for i := 0; i < nEvents; i++ {
-				fd := int(s.EventList[i].Fd)
+			for i := 0; i < len(nEvents); i++ {
+				fd := int(nEvents[i].Fd)
 				if fd > s.Owner.MaxSocketNum {
 					log.Println("IoThread EpollWait invalid fd:%d", fd)
 					continue
@@ -103,17 +103,17 @@ func (s *IoThread) Start() error {
 					continue
 				}
 
-				if s.EventList[i].Events&syscall.EPOLLERR > 0 {
+				if nEvents[i].Flags&aio.Err > 0 {
 					log.Println("IoThread EpollWait EPOLLERR")
 					s.closeConn(fd)
 					continue
 				}
 
-				if s.EventList[i].Events&syscall.EPOLLIN > 0 {
+				if nEvents[i].Flags&aio.In > 0 {
 					s.handleRead(fd)
 				}
 
-				if s.EventList[i].Events&syscall.EPOLLOUT > 0 {
+				if nEvents[i].Flags&aio.Out > 0 {
 					s.handleWrite(fd)
 				}
 			}
@@ -151,7 +151,7 @@ func (s *IoThread) handleRead(fd int) error {
 		s.closeConn(fd)
 		return nil
 	}
-	if n > READ_BUFFER_LEN {
+	if n > global.READ_BUFFER_LEN {
 		log.Println("HandleRead read too much,n:%d", n)
 		//panic("HandleRead read too much")
 		return errors.New("read too much")
@@ -176,7 +176,7 @@ func (s *IoThread) handleRead(fd int) error {
 			break
 		}
 
-		if packlen > MAX_PACK_LEN {
+		if packlen > global.MAX_PACK_LEN {
 			log.Println("HandleRead invalid packlen:%d", packlen)
 			s.closeConn(fd)
 			return errors.New("invalid packlen")
@@ -233,7 +233,7 @@ func (s *IoThread) handleWrite(fd int) error {
 
 	if n == writeBuffLen {
 		//已发完，取消 EPOLLOUT事件
-		err := EpollModFd(s.EpollFd, fd, syscall.EPOLLIN|syscall.EPOLLERR)
+		err := aio.Poller(s.EpollFd).Add(fd, aio.In|aio.Err)
 		if err != nil {
 			log.Println("HandleWrite EpollModFd failed,fd=%d,err=%s", fd, err.Error())
 			s.closeConn(fd)
@@ -266,7 +266,7 @@ func (s *IoThread) closeConn(fd int) error {
 		s.tryWrite(c.SInfo.Fd)
 	}
 
-	EpollDelFd(s.EpollFd, fd)
+	aio.Poller(s.EpollFd).Delete(fd)
 	syscall.Close(fd)
 	s.Owner.ConnList[fd] = nil
 	log.Println("CloseConn ok,SocketInfo:%+v", c.SInfo)
