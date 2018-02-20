@@ -4,7 +4,7 @@
 
 // +build netbsd freebsd dragonfly linux
 
-package internal
+package aio
 
 import "syscall"
 

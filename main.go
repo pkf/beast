@@ -2,12 +2,16 @@ package main
 
 import (
 	"beast/global"
+	"beast/protocol"
+	"beast/util"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
+	"runtime"
 )
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	fmt.Println("Config:", global.Config)
 	//pprof
 	go func() {
@@ -22,5 +26,7 @@ func main() {
 		}
 	}()
 
-	InitServer(1024, 3, 60, "127.0.0.1:9999")
+	InitServer(4, 1024, 3, 60, "127.0.0.1:9999", new(protocol.HttpParser{}))
+
+	util.InitSignal()
 }
