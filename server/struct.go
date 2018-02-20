@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bytes"
@@ -20,15 +20,6 @@ type SocketInfo struct {
 type NotifyEvent struct {
 	Type int //1.accept  2.write 3.close
 	Info *SocketInfo
-}
-
-type Configuration struct {
-	ServerHost     string
-	EnableSSL      int
-	Mode           string
-	MaxSocketNum   int
-	CheckTimeoutTs int
-	TimeoutTs      int
 }
 
 type IoThread struct {

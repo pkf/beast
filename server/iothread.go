@@ -1,6 +1,7 @@
-package main
+package server
 
 import (
+	"beast/global"
 	"errors"
 	"log"
 	"sync"
@@ -20,7 +21,7 @@ func NewIoThread(o *TcpServer, index int) *IoThread {
 		EventList:        make([]syscall.EpollEvent, int(o.MaxSocketNum/o.IoThreadNum)+1),
 		NotifyList:       []*NotifyEvent{},
 		NotifyMutex:      sync.Mutex{},
-		ReadTmpBuffer:    make([]byte, READ_BUFFER_LEN),
+		ReadTmpBuffer:    make([]byte, global.READ_BUFFER_LEN),
 		NotifyWriteBytes: [8]byte{1, 0, 0, 0, 0, 0, 0, 0},
 		NotifyReadBytes:  [8]byte{0, 0, 0, 0, 0, 0, 0, 0},
 	}

@@ -1,6 +1,7 @@
-package main
+package server
 
 import (
+	"beast/global"
 	"log"
 )
 
@@ -16,7 +17,7 @@ func (c *ConnInfo) AsynSendMsg(msg []byte) bool {
 		c.AsynClose()
 		return false
 	}
-	c.T.Notify(EVENT_WRITE, c.SInfo)
+	c.T.Notify(global.EVENT_WRITE, c.SInfo)
 	//logging.Debug("SendMsg msg:%#v,c:%+v",msg,c)
 	return true
 }
@@ -29,5 +30,5 @@ func (c *ConnInfo) SynClose() bool {
 //异步关闭连接
 func (c *ConnInfo) AsynClose() {
 	log.Println("ConnInfo Close,c:%+v", c)
-	c.T.Notify(EVENT_CLOSE, c.SInfo)
+	c.T.Notify(global.EVENT_CLOSE, c.SInfo)
 }

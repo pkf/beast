@@ -1,7 +1,6 @@
-package main
+package server
 
 import (
-	. "beast/global"
 	"errors"
 	"log"
 	"syscall"
