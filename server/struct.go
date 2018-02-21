@@ -15,12 +15,9 @@ type SocketInfo struct {
 	LastAccessTime int64
 	ReadBuffer     *bytes.Buffer
 	WriteBuffer    *bytes.Buffer
-	EpollFlag      int        //EpollModFd is more time-consuming and can save the last epoll flag, temporarily not optimizes
+	EpollFlag      int        //EpollModFd is more time-consuming and can save the last epoll flag
 	Id             uint64     //Unique identifier
 	WriteMutex     sync.Mutex //Protected write buffer
-}
-
-type Event struct {
 }
 
 type NotifyEvent struct {
@@ -34,7 +31,7 @@ type IoThread struct {
 	NotifyMutex      sync.Mutex
 	NotifyWriteBytes [8]byte
 	NotifyReadBytes  [8]byte
-	Owner            *TcpServer
+	Server           *TcpServer
 	EpollFd          int
 	NotifyFdW        int
 	NotifyFdR        int
@@ -53,13 +50,13 @@ type TcpServer struct {
 	TimeoutTs      int //How many seconds of timeout
 }
 
-type BusiInfo struct {
+type BisinessInfo struct {
 }
 
 type ConnInfo struct {
-	SInfo *SocketInfo
-	BInfo *BusiInfo
-	T     *IoThread
+	SocketInfo   *SocketInfo
+	BisinessInfo *BisinessInfo
+	T            *IoThread
 }
 
 /*

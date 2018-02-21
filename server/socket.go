@@ -19,21 +19,20 @@ func NewSocketInfo(fd int, id uint64, addr syscall.Sockaddr) *SocketInfo {
 	}
 }
 
-func (s *SocketInfo) AddMsgToWriteBuffer(msg []byte) bool {
-	s.WriteMutex.Lock()
-	nWrite, err := s.WriteBuffer.Write(msg)
-	s.WriteMutex.Unlock()
+func (this *SocketInfo) AddMsgToWriteBuffer(msg []byte) bool {
+	this.WriteMutex.Lock()
+	nWrite, err := this.WriteBuffer.Write(msg)
+	this.WriteMutex.Unlock()
 	if nWrite != len(msg) || err != nil {
-		log.Infof("SocketInfo AddMsgToWriteBuffer Write Buffer failed,s=%+v", s)
-		//s.closeConn(fd)
+		log.Infof("SocketInfo AddMsgToWriteBuffer Write Buffer failed,s=%+v", this)
+		//this.closeConn(fd)
 		return false
 	}
-	//logging.Debug("AddMsgToWriteBuffer msg:%#v",msg)
+	//log.InfoF("AddMsgToWriteBuffer msg:%#v",msg)
 	return true
 }
 
-//Modify the last active time of socket
-func (s *SocketInfo) UpdateAccessTime() bool {
-	s.LastAccessTime = time.Now().Unix()
+func (this *SocketInfo) UpdateAccessTime() bool {
+	this.LastAccessTime = time.Now().Unix()
 	return true
 }

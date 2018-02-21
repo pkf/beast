@@ -37,72 +37,70 @@ func NewTcpServer(ioNum, maxSocketNum, checkTimeoutTs, timeoutTs int, addr strin
 	}
 }
 
-func (s *TcpServer) Start() error {
-
-	for i := 0; i < s.IoThreadNum; i++ {
-		iothread := NewIoThread(s, i)
-		s.IoThreadList = append(s.IoThreadList, iothread)
+func (this *TcpServer) Start() error {
+	for i := 0; i < this.IoThreadNum; i++ {
+		iothread := NewIoThread(this, i)
+		this.IoThreadList = append(this.IoThreadList, iothread)
 		iothread.Start()
 	}
 
-	listenfd, err := s.CreateListenSocket(s.Addr)
+	listenfd, err := this.CreateListenSocket(this.Addr)
 	if err != nil {
 		log.Infof("TcpServer CreateListenSocket failed")
 		return err
 	}
 
 	for {
-		//logging.Debug("loop1")
 		fd, addr, err := syscall.Accept(listenfd)
 		if err != nil {
 			log.Infof("TcpServer Accept failed")
 			continue
 		}
 
-		if fd > s.MaxSocketNum {
+		if fd > this.MaxSocketNum {
 			log.Infof("IoThread Accept invalid fd:%d", fd)
 			continue
 		}
-		id := s.CreateUniqueId()
+		id := this.CreateUniqueId()
 
 		socketInfo := NewSocketInfo(fd, id, addr)
-		ioIndex := fd % s.IoThreadNum
+		ioIndex := fd % this.IoThreadNum
 		log.Infof("Accept fd=%d,id:%d,ioIndex=%d,addr=%+v,err=%+v", fd, id, ioIndex, addr, err)
-		s.IoThreadList[ioIndex].Notify(global.EVENT_ACCEPT, socketInfo)
+		this.IoThreadList[ioIndex].Notify(global.EVENT_ACCEPT, socketInfo)
 	}
 
 	return nil
 }
 
-func (s *TcpServer) CreateUniqueId() uint64 {
-	s.UniqueId += 1
-	return s.UniqueId
+func (this *TcpServer) CreateUniqueId() uint64 {
+	this.UniqueId += 1
+	return this.UniqueId
 }
 
-//异步场景下检查socket唯一id是否匹配
-func (s *TcpServer) CheckSocketId(fd int, id uint64) bool {
-	if fd > s.MaxSocketNum {
+func (this *TcpServer) CheckSocketId(fd int, id uint64) bool {
+	if fd > this.MaxSocketNum {
 		log.Infof("TcpServer CheckSocketId failed,fd:%d,id:%d", fd, id)
 		return false
 	}
-	c := s.ConnList[fd]
+	c := this.ConnList[fd]
 	if c == nil {
 		log.Infof("TcpServer CheckSocketId failed, already closed,fd:%d,id:%d", fd, id)
 		return false
 	}
-	return c.SInfo.Id == id
+	return c.SocketInfo.Id == id
 }
 
-func (s *TcpServer) SendMsg(fd int, id uint64, msg []byte) error {
+/*
+func (this *TcpServer) SendMsg(fd int, id uint64, msg []byte) error {
 	if len(msg) == 0 {
 		log.Infof("TcpServer SendMsg empty,fd=%d", fd)
 		return nil
 	}
-	if !s.CheckSocketId(fd, id) {
+	if !this.CheckSocketId(fd, id) {
 		log.Infof("TcpServer SendMsg CheckSocketId failed,fd:%d,id:%d", fd, id)
-		return errors.New("CheckSocketId failed")
+		return errorthis.New("CheckSocketId failed")
 	}
-	c := s.ConnList[fd]
+	c := this.ConnList[fd]
 	if c != nil {
 		c.AsynSendMsg(msg)
 		log.Infof("TcpServer SendMsg ok,msg:%#v,fd:%d,id:%d", msg, fd, id)
@@ -111,8 +109,9 @@ func (s *TcpServer) SendMsg(fd int, id uint64, msg []byte) error {
 	}
 	return nil
 }
+*/
 
-func (s *TcpServer) CreateListenSocket(ipport string) (int, error) {
+func (this *TcpServer) CreateListenSocket(ipport string) (int, error) {
 	socket, _ := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
 	var flag = int(1)
 	err := syscall.SetsockoptInt(socket, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, flag)
