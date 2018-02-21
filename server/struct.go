@@ -15,9 +15,9 @@ type SocketInfo struct {
 	LastAccessTime int64
 	ReadBuffer     *bytes.Buffer
 	WriteBuffer    *bytes.Buffer
-	EpollFlag      int        //EpollModFd比较耗时，可以保存上次epoll flag，暂时不优化
-	Id             uint64     //唯一标识
-	WriteMutex     sync.Mutex //保护写缓冲区
+	EpollFlag      int        //EpollModFd is more time-consuming and can save the last epoll flag, temporarily not optimizes
+	Id             uint64     //Unique identifier
+	WriteMutex     sync.Mutex //Protected write buffer
 }
 
 type Event struct {
@@ -49,8 +49,8 @@ type TcpServer struct {
 	Addr           string
 	UniqueId       uint64
 	Parser         TcpParser
-	CheckTimeoutTs int //多久检查一次
-	TimeoutTs      int //多少秒超时
+	CheckTimeoutTs int //How long will it be checked
+	TimeoutTs      int //How many seconds of timeout
 }
 
 type BusiInfo struct {
@@ -68,7 +68,7 @@ Unpack 用来计算包长；遇到非法包才返回false；未判断出包长�
 HandlePack 用来处理业务包，参数中的msg是完整包
 */
 type TcpParser interface {
-	Unpack(msg []byte, c *ConnInfo) (ok bool, packlen int) //返回成功失败，包长,包长为0表示包长未知
+	Unpack(msg []byte, c *ConnInfo) (ok bool, packlen int)
 	HandlePack(msg []byte, c *ConnInfo) (ok bool)
 	//WriteFinishCb(c *ConnInfo)
 }

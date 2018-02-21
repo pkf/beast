@@ -12,8 +12,8 @@ var (
 	Server *TcpServer
 )
 
-//io线程数量不要超过 CPU物理core的个数（非逻辑处理器个数），配置为core-1 时性能最强
-//查看core个数：cat /proc/cpuinfo| grep "cpu cores"| uniq
+//The number of IO threads should not exceed the number of CPU physical core (the number of non logical processors)
+//cat /proc/cpuinfo| grep "cpu cores"| uniq
 func InitServer(ioNum, maxSocketNum, checkTimeoutTs, timeoutTs int, addr string, parser TcpParser) {
 	Server = NewTcpServer(ioNum, maxSocketNum, checkTimeoutTs, timeoutTs, addr, parser)
 	Server.Start()

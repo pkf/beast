@@ -4,12 +4,12 @@ import (
 	"beast/global"
 )
 
-//同步发送消息，只能在io线程内使用
+//Send messages synchronously, only used within the IO threads
 func (c *ConnInfo) SynSendMsg(msg []byte) bool {
 	return c.T.WriteDirect(c.SInfo.Fd, msg) == nil
 }
 
-//异步发送消息
+//Asynchronous send message
 func (c *ConnInfo) AsynSendMsg(msg []byte) bool {
 	if !c.SInfo.AddMsgToWriteBuffer(msg) {
 		log.Infof("ConnInfo SendMsg failed,c:%+v", c)
@@ -21,12 +21,12 @@ func (c *ConnInfo) AsynSendMsg(msg []byte) bool {
 	return true
 }
 
-//同步关闭连接，只能在io线程内使用
+//Shut down the connection synchronously and can only be used in the IO thread
 func (c *ConnInfo) SynClose() bool {
 	return c.T.CloseDirect(c.SInfo.Fd) == nil
 }
 
-//异步关闭连接
+//Asynchronous close connection
 func (c *ConnInfo) AsynClose() {
 	log.Infof("ConnInfo Close,c:%+v", c)
 	c.T.Notify(global.EVENT_CLOSE, c.SInfo)

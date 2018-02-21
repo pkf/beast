@@ -8,7 +8,7 @@ const (
 )
 
 const (
-	ACCEPT_CHAN_LEN = 10240
+	ACCEPT_CHAN_LEN = 102400 //backlog
 	READ_BUFFER_LEN = 8192   //读缓冲区默认大小
 	MAX_PACK_LEN    = 102400 //最大包长
 )

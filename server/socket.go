@@ -32,7 +32,7 @@ func (s *SocketInfo) AddMsgToWriteBuffer(msg []byte) bool {
 	return true
 }
 
-//修改socket的上次活跃时间
+//Modify the last active time of socket
 func (s *SocketInfo) UpdateAccessTime() bool {
 	s.LastAccessTime = time.Now().Unix()
 	return true

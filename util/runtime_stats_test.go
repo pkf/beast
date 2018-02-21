@@ -7,16 +7,16 @@ import (
 )
 
 func TestHumanSize(t *testing.T) {
-	if humanSize(uint64(3)) != "3B" {
+	if HumanSize(uint64(3)) != "3B" {
 		t.Fail()
 	}
-	if humanSize(uint64(1331)) != "1.3KB" {
+	if HumanSize(uint64(1331)) != "1.3KB" {
 		t.Fail()
 	}
-	if humanSize(uint64(1363148)) != "1.3MB" {
+	if HumanSize(uint64(1363148)) != "1.3MB" {
 		t.Fail()
 	}
-	if humanSize(uint64(1395864371)) != "1.3GB" {
+	if HumanSize(uint64(1395864371)) != "1.3GB" {
 		t.Fail()
 	}
 }

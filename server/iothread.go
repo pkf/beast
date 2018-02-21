@@ -95,7 +95,7 @@ func (s *IoThread) Start() error {
 					continue
 				}
 
-				//有自定义事件
+				//Have custom events
 				if fd == s.NotifyFdR {
 					_, err := syscall.Read(s.NotifyFdR, s.NotifyReadBytes[:])
 					if err != nil {
@@ -143,14 +143,14 @@ func (s *IoThread) handleRead(fd int) error {
 	connInfo.SInfo.UpdateAccessTime()
 
 	n, err := syscall.Read(fd, s.ReadTmpBuffer)
-	//看看EAGAIN会返回什么
+	//what EAGAIN is return
 	if err != nil || n < 0 {
 		log.Infof("HandleRead Read error,fd=%d,socket=%+v", fd, connInfo.SInfo)
 		s.closeConn(fd)
 		return errors.New("Read error")
 	}
 
-	//对端关闭，并且发送缓冲区无数据
+	//socket closes and sends no data in the buffer.
 	if n == 0 {
 		log.Infof("HandleRead close by peer,fd=%d,socket=%+v", fd, connInfo.SInfo)
 		s.closeConn(fd)
@@ -203,9 +203,8 @@ func (s *IoThread) handleRead(fd int) error {
 			break
 		}
 	}
-	//测试
-	//s.sendMsg(fd, s.ReadTmpBuffer[0:n])
 
+	//s.sendMsg(fd, s.ReadTmpBuffer[0:n])
 	return nil
 }
 
@@ -229,7 +228,7 @@ func (s *IoThread) handleWrite(fd int) error {
 	writeBuffLen = connInfo.SInfo.WriteBuffer.Len()
 
 	n, err := syscall.Write(fd, connInfo.SInfo.WriteBuffer.Bytes())
-	//看看EAGAIN会返回啥
+	//Look at what EAGAIN will return
 	if err != nil || n < 0 {
 		log.Infof("HandleWrite Write error,fd=%d,addr=%s", fd, connInfo.SInfo.Addr)
 		s.closeConn(fd)
@@ -237,7 +236,7 @@ func (s *IoThread) handleWrite(fd int) error {
 	}
 
 	if n == writeBuffLen {
-		//已发完，取消 EPOLLOUT事件
+		//has finished, cancel the EPOLLOUT event
 		err := aio.Poller(s.EpollFd).Add(fd, aio.In|aio.Err)
 		if err != nil {
 			log.Infof("HandleWrite EpollModFd failed,fd=%d,err=%s", fd, err.Error())
@@ -248,7 +247,7 @@ func (s *IoThread) handleWrite(fd int) error {
 		//s.Owner.Parser.WriteFinishCb(connInfo)
 		//log.Infof("HandleWrite Reset WriteBuffer,Cap=%d", connInfo.SInfo.WriteBuffer.Cap())
 	} else {
-		//修改WriteBuffer的偏移
+		//modifying the offset of WriteBuffer
 		connInfo.SInfo.WriteBuffer.Next(n)
 	}
 
@@ -259,7 +258,7 @@ func (s *IoThread) tryWrite(fd int) error {
 	return s.handleWrite(fd)
 }
 
-//io线程内关闭连接
+//Close connections within the IO thread
 func (s *IoThread) closeConn(fd int) error {
 	c := s.Owner.ConnList[fd]
 	if c == nil {
@@ -303,17 +302,17 @@ func (s *IoThread) checkTimeoutFds() {
 	//log.Infof("checkTimeoutFds finished")
 }
 
-//异步场景下检查socket唯一id是否匹配
+//Check whether the socket only ID matches in asynchronous mode
 func (s *IoThread) CheckSocketInfo(socketInfo *SocketInfo) bool {
 	return s.Owner.CheckSocketId(socketInfo.Fd, socketInfo.Id)
 }
 
-//在io线程中才可以调用
+//called in the IO thread
 func (s *IoThread) CloseDirect(fd int) error {
 	return s.closeConn(fd)
 }
 
-//在io线程中才可以调用
+//called in the IO thread
 func (s *IoThread) WriteDirect(fd int, msg []byte) error {
 	n, err := syscall.Write(fd, msg)
 	if err != nil || n < 0 { //看看EAGAIN会返回啥
