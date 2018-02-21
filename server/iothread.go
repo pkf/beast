@@ -229,7 +229,8 @@ func (s *IoThread) handleWrite(fd int) error {
 	writeBuffLen = connInfo.SInfo.WriteBuffer.Len()
 
 	n, err := syscall.Write(fd, connInfo.SInfo.WriteBuffer.Bytes())
-	if err != nil || n < 0 { //看看EAGAIN会返回啥
+	//看看EAGAIN会返回啥
+	if err != nil || n < 0 {
 		log.Infof("HandleWrite Write error,fd=%d,addr=%s", fd, connInfo.SInfo.Addr)
 		s.closeConn(fd)
 		return errors.New("Write error")
