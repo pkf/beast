@@ -24,7 +24,7 @@ func (this *IoThread) handleAcceptEvent(socketInfo *SocketInfo) error {
 		return err
 	}
 
-	err = aio.Poller(this.EpollFd).Add(socketInfo.Fd, aio.In|aio.Err)
+	err = aio.Poller(this.PollFd).Add(socketInfo.Fd, aio.In|aio.Err)
 	if err != nil {
 		log.Infof("IoThread HandleAccept EpollAddFd failed,err=%s", err.Error())
 		syscall.Close(socketInfo.Fd)
@@ -45,7 +45,7 @@ func (this *IoThread) handleWriteEvent(socketInfo *SocketInfo) error {
 		log.Infof("HandleWriteEvent CheckSocketInfo failed")
 		return errors.New("CheckSocketInfo failed")
 	}
-	err := aio.Poller(this.EpollFd).Add(socketInfo.Fd, aio.In|aio.Out|aio.Err)
+	err := aio.Poller(this.PollFd).Add(socketInfo.Fd, aio.In|aio.Out|aio.Err)
 	if err != nil {
 		log.Infof("HandleWriteEvent EpollModFd failed,fd=%d,err=%s", socketInfo.Fd, err.Error())
 		this.closeConn(socketInfo.Fd)

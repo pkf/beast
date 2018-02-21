@@ -27,7 +27,8 @@ func main() {
 		}
 	}()
 
-	server.InitServer(2, 1024, 3, 60, "127.0.0.1:9999", new(protocol.HttpParser))
+	//server.InitServer(2, 1024, 3, 60, "127.0.0.1:9999", new(protocol.HttpParser))
+	server.InitServer(2, 1024, 3, 3600, "127.0.0.1:9999", new(protocol.SimpleParser))
 
 	util.InitSignal()
 }

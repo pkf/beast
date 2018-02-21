@@ -11,7 +11,7 @@ import (
 
 func NewIoThread(server *TcpServer, index int) *IoThread {
 	if server == nil {
-		log.Infof("NewIoThread invalid config")
+		log.Infof("New IoThread invalid config")
 		return nil
 	}
 
@@ -27,18 +27,18 @@ func NewIoThread(server *TcpServer, index int) *IoThread {
 }
 
 func (this *IoThread) Start() error {
-	//this.EpollFd, err = syscall.EpollCreate(this.Server.MaxSocketNum)
+	//this.PollFd, err = syscall.EpollCreate(this.Server.MaxSocketNum)
 	pollFd, err := aio.NewPoller()
 	if err != nil {
 		log.Infof("IoThread EpollCreate failed")
 		return err
 	}
-	this.EpollFd = int(pollFd)
+	this.PollFd = int(pollFd)
 
 	//r1, _, errn := syscall.Syscall(284, 0, 0, 0)
 	r, w, err := aio.Pipe()
 	if err != nil {
-		log.Infof("SYS_EVENTFD failed,IoThread exit,errn=%d", err)
+		log.Infof("Create NotifyFd failed,IoThread exit,errn=%d", err)
 		return nil
 	}
 	this.NotifyFdR = r
@@ -79,7 +79,7 @@ func (this *IoThread) Start() error {
 
 			nEvents, err := pollFd.Wait(time.Duration(ts) * time.Millisecond)
 			if err != nil {
-				log.Infof("IoThread EpollWait failed,err=%s", err.Error())
+				log.Infof("IoThread PollWait failed,err=%s", err.Error())
 				continue
 			}
 
@@ -91,7 +91,7 @@ func (this *IoThread) Start() error {
 			for i := 0; i < len(nEvents); i++ {
 				fd := int(nEvents[i].Fd)
 				if fd > this.Server.MaxSocketNum {
-					log.Infof("IoThread EpollWait invalid fd:%d", fd)
+					log.Infof("IoThread PollWait invalid fd:%d", fd)
 					continue
 				}
 
@@ -99,27 +99,27 @@ func (this *IoThread) Start() error {
 				if fd == this.NotifyFdR {
 					_, err := syscall.Read(this.NotifyFdR, this.NotifyReadBytes[:])
 					if err != nil {
-						log.Infof("NotifyFd Read,err:%s", err.Error())
+						log.Infof("NotifyFd Read,err:%s, fd:%d", err.Error(), fd)
 						continue
 					}
 					b_handle_notify = true
-					log.Infof("NotifyFdR fd")
+					log.Infof("NotifyFdR , fd:%d", fd)
 					continue
 				}
 
 				if nEvents[i].Flags&aio.Err > 0 {
-					log.Infof("IoThread EpollWait Err")
+					log.Infof("IoThread PollWait Err, fd:%d", fd)
 					this.closeConn(fd)
 					continue
 				}
 
 				if nEvents[i].Flags&aio.In > 0 {
-					log.Infof("IoThread EpollWait In")
+					log.Infof("IoThread PollWait In, fd:%d", fd)
 					this.handleRead(fd)
 				}
 
 				if nEvents[i].Flags&aio.Out > 0 {
-					log.Infof("IoThread EpollWait Out")
+					log.Infof("IoThread PollWait Out, fd:%d", fd)
 					this.handleWrite(fd)
 				}
 			}
@@ -236,7 +236,7 @@ func (this *IoThread) handleWrite(fd int) error {
 
 	if n == writeBuffLen {
 		//has finished, cancel the EPOLLOUT event
-		err := aio.Poller(this.EpollFd).Add(fd, aio.In|aio.Err)
+		err := aio.Poller(this.PollFd).Add(fd, aio.In|aio.Err)
 		if err != nil {
 			log.Infof("HandleWrite EpollModFd failed,fd=%d,err=%s", fd, err.Error())
 			this.closeConn(fd)
@@ -269,7 +269,7 @@ func (this *IoThread) closeConn(fd int) error {
 		this.tryWrite(c.SocketInfo.Fd)
 	}
 
-	aio.Poller(this.EpollFd).Delete(fd)
+	aio.Poller(this.PollFd).Delete(fd)
 	syscall.Close(fd)
 	this.Server.ConnList[fd] = nil
 	log.Infof("CloseConn ok,SocketInfo:%+v", c.SocketInfo)
@@ -314,7 +314,7 @@ func (this *IoThread) CloseDirect(fd int) error {
 //called in the IO thread
 func (this *IoThread) WriteDirect(fd int, msg []byte) error {
 	n, err := syscall.Write(fd, msg)
-	if err != nil || n < 0 { //看看EAGAIN会返回啥
+	if err != nil || n < 0 { //EAGAIN?
 		log.Infof("WriteDirect error,fd=%d,msg=%s", fd, string(msg))
 		this.closeConn(fd)
 		return errors.New("Write error")

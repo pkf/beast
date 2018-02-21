@@ -32,7 +32,7 @@ type IoThread struct {
 	NotifyWriteBytes [8]byte
 	NotifyReadBytes  [8]byte
 	Server           *TcpServer
-	EpollFd          int
+	PollFd           int
 	NotifyFdW        int
 	NotifyFdR        int
 	ReadTmpBuffer    []byte
