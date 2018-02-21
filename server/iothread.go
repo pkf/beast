@@ -18,7 +18,6 @@ func NewIoThread(o *TcpServer, index int) *IoThread {
 	return &IoThread{
 		Index:            index,
 		Owner:            o,
-		EventList:        make([]Event, int(o.MaxSocketNum/o.IoThreadNum)+1),
 		NotifyList:       []*NotifyEvent{},
 		NotifyMutex:      sync.Mutex{},
 		ReadTmpBuffer:    make([]byte, global.READ_BUFFER_LEN),
@@ -67,7 +66,6 @@ func (s *IoThread) Start() error {
 		var b_handle_notify bool
 
 		for {
-
 			if time.Since(lastNotify) < time.Second {
 				ts = 50
 			} else {

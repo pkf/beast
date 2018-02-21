@@ -29,9 +29,7 @@ type NotifyEvent struct {
 }
 
 type IoThread struct {
-	Index int
-	//EventList        []syscall.EpollEvent
-	EventList        []Event
+	Index            int
 	NotifyList       []*NotifyEvent
 	NotifyMutex      sync.Mutex
 	NotifyWriteBytes [8]byte

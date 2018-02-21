@@ -27,6 +27,7 @@ func Pipe() (r int, w int, err error) {
 	syscall.SetNonblock(p[1], true)
 
 	syscall.ForkLock.RUnlock()
+
 	return p[0], p[1], nil
 	//return os.NewFile(uintptr(p[0]), "|0"), os.NewFile(uintptr(p[1]), "|1"), nil
 }
