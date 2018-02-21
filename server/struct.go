@@ -35,7 +35,8 @@ type IoThread struct {
 	NotifyReadBytes  [8]byte
 	Owner            *TcpServer
 	EpollFd          int
-	NotifyFd         int
+	NotifyFdW        int
+	NotifyFdR        int
 	ReadTmpBuffer    []byte
 }
 

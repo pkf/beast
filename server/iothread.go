@@ -37,18 +37,26 @@ func (s *IoThread) Start() error {
 	}
 	s.EpollFd = int(pollFd)
 
-	r1, _, errn := syscall.Syscall(284, 0, 0, 0)
-	if errn != 0 {
-		log.Println("SYS_EVENTFD failed,IoThread exit,errn=%d", errn)
+	//r1, _, errn := syscall.Syscall(284, 0, 0, 0)
+	r, w, err := aio.Pipe()
+	if err != nil {
+		log.Println("SYS_EVENTFD failed,IoThread exit,errn=%d", err)
 		return nil
 	}
-	s.NotifyFd = int(r1)
+	s.NotifyFdR = r
+	s.NotifyFdW = w
 
-	syscall.SetNonblock(s.NotifyFd, true)
-	err = pollFd.Add(s.NotifyFd, aio.In|aio.Err)
+	err = pollFd.Add(s.NotifyFdR, aio.In|aio.Err)
 	if err != nil {
 		log.Println("IoThread  EpollAddFd NotifyFd failed,err=%s", err.Error())
-		syscall.Close(s.NotifyFd)
+		syscall.Close(s.NotifyFdR)
+		return err
+	}
+
+	err = pollFd.Add(s.NotifyFdW, aio.Out|aio.Err)
+	if err != nil {
+		log.Println("IoThread  EpollAddFd NotifyFd failed,err=%s", err.Error())
+		syscall.Close(s.NotifyFdW)
 		return err
 	}
 
@@ -76,9 +84,6 @@ func (s *IoThread) Start() error {
 				log.Println("IoThread EpollWait failed,err=%s", err.Error())
 				continue
 			}
-			//time.Sleep(time.Microsecond * 100)
-			//nEvents := 0
-			//log.Println("loop2,nEvents=%d,s.EpollFd=%d", nEvents, s.EpollFd)
 
 			if len(nEvents) > 0 {
 				lastNotify = time.Now()
@@ -93,8 +98,8 @@ func (s *IoThread) Start() error {
 				}
 
 				//有自定义事件
-				if fd == s.NotifyFd {
-					_, err := syscall.Read(s.NotifyFd, s.NotifyReadBytes[:])
+				if fd == s.NotifyFdR {
+					_, err := syscall.Read(s.NotifyFdR, s.NotifyReadBytes[:])
 					if err != nil {
 						log.Println("NotifyFd Read,err:%s", err.Error())
 						continue

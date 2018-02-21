@@ -13,17 +13,17 @@ import (
 	"unsafe"
 )
 
-type poller int
+type Poller int
 
-func newPoller() (poller, error) {
+func newPoller() (Poller, error) {
 	fd, err := C.epoll_create1(C.O_CLOEXEC)
 	if err != nil {
 		return 0, err
 	}
-	return poller(fd), nil
+	return Poller(fd), nil
 }
 
-func (p poller) Add(fd int, flags Flags) error {
+func (p Poller) Add(fd int, flags Flags) error {
 	var ev C.struct_epoll_event
 	if flags&In != 0 {
 		ev.events |= C.EPOLLIN
@@ -31,8 +31,8 @@ func (p poller) Add(fd int, flags Flags) error {
 	if flags&Out != 0 {
 		ev.events |= C.EPOLLOUT
 	}
-	if flags&OneShot != 0 {
-		ev.events |= C.EPOLLONESHOT //EPOLLERR
+	if flags&Err != 0 {
+		ev.events |= C.EPOLLERR
 	}
 	var dataFd = (*C.int)(unsafe.Pointer(&ev.data))
 	*dataFd = C.int(fd)
@@ -49,7 +49,7 @@ func (p poller) Add(fd int, flags Flags) error {
 	return err
 }
 
-func (p poller) Delete(fd int) error {
+func (p Poller) Delete(fd int) error {
 	var ev C.struct_epoll_event
 	// event must be non-NULL in kernels < 2.6.9
 	ok, err := C.epoll_ctl(C.int(p), C.EPOLL_CTL_DEL, C.int(fd), &ev)
@@ -59,7 +59,7 @@ func (p poller) Delete(fd int) error {
 	return nil
 }
 
-func (p poller) Wait(duration time.Duration) ([]event, error) {
+func (p Poller) Wait(duration time.Duration) ([]Event, error) {
 	const maxEvents = 64
 	inEvents := make([]C.struct_epoll_event, maxEvents)
 	var timeout C.int
@@ -85,13 +85,13 @@ func (p poller) Wait(duration time.Duration) ([]event, error) {
 		if inEvent.events&C.EPOLLOUT != 0 {
 			flags |= Out
 		}
-		if inEvent.events&C.EPOLLONESHOT != 0 {
-			flags |= OneShot
+		if inEvent.events&C.EPOLLERR != 0 {
+			flags |= Err
 		}
 		fd := (*C.int)(unsafe.Pointer(&inEvent.data))
-		events[ii] = event{
-			fd:    int(*fd),
-			flags: flags,
+		events[ii] = Event{
+			Fd:    int(*fd),
+			Flags: flags,
 		}
 	}
 	return events, nil

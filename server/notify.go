@@ -94,7 +94,7 @@ func (s *IoThread) Notify(_type int, info *SocketInfo) error {
 	s.NotifyMutex.Lock()
 	s.NotifyList = append(s.NotifyList, e)
 	s.NotifyMutex.Unlock()
-	_, err := syscall.Write(s.NotifyFd, s.NotifyWriteBytes[:])
+	_, err := syscall.Write(s.NotifyFdW, s.NotifyWriteBytes[:])
 	if err != nil {
 		log.Println("IoThread Notify failed,err:%s", err.Error())
 		return err
