@@ -2,7 +2,6 @@ package server
 
 import (
 	"beast/global"
-	"log"
 )
 
 //同步发送消息，只能在io线程内使用
@@ -13,7 +12,7 @@ func (c *ConnInfo) SynSendMsg(msg []byte) bool {
 //异步发送消息
 func (c *ConnInfo) AsynSendMsg(msg []byte) bool {
 	if !c.SInfo.AddMsgToWriteBuffer(msg) {
-		log.Println("ConnInfo SendMsg failed,c:%+v", c)
+		log.Infof("ConnInfo SendMsg failed,c:%+v", c)
 		c.AsynClose()
 		return false
 	}
@@ -29,6 +28,6 @@ func (c *ConnInfo) SynClose() bool {
 
 //异步关闭连接
 func (c *ConnInfo) AsynClose() {
-	log.Println("ConnInfo Close,c:%+v", c)
+	log.Infof("ConnInfo Close,c:%+v", c)
 	c.T.Notify(global.EVENT_CLOSE, c.SInfo)
 }

@@ -4,7 +4,6 @@ import (
 	"beast/aio"
 	"beast/global"
 	"errors"
-	"log"
 	"sync"
 	"syscall"
 	"time"
@@ -12,7 +11,7 @@ import (
 
 func NewIoThread(o *TcpServer, index int) *IoThread {
 	if o == nil {
-		log.Println("NewIoThread invalid config")
+		log.Infof("NewIoThread invalid config")
 		return nil
 	}
 
@@ -32,7 +31,7 @@ func (s *IoThread) Start() error {
 	//s.EpollFd, err = syscall.EpollCreate(s.Owner.MaxSocketNum)
 	pollFd, err := aio.NewPoller()
 	if err != nil {
-		log.Println("IoThread EpollCreate failed")
+		log.Infof("IoThread EpollCreate failed")
 		return err
 	}
 	s.EpollFd = int(pollFd)
@@ -40,7 +39,7 @@ func (s *IoThread) Start() error {
 	//r1, _, errn := syscall.Syscall(284, 0, 0, 0)
 	r, w, err := aio.Pipe()
 	if err != nil {
-		log.Println("SYS_EVENTFD failed,IoThread exit,errn=%d", err)
+		log.Infof("SYS_EVENTFD failed,IoThread exit,errn=%d", err)
 		return nil
 	}
 	s.NotifyFdR = r
@@ -48,17 +47,18 @@ func (s *IoThread) Start() error {
 
 	err = pollFd.Add(s.NotifyFdR, aio.In|aio.Err)
 	if err != nil {
-		log.Println("IoThread  EpollAddFd NotifyFd failed,err=%s", err.Error())
+		log.Infof("IoThread  EpollAddFd NotifyFd failed,err=%s", err.Error())
 		syscall.Close(s.NotifyFdR)
 		return err
 	}
-
-	err = pollFd.Add(s.NotifyFdW, aio.Out|aio.Err)
-	if err != nil {
-		log.Println("IoThread  EpollAddFd NotifyFd failed,err=%s", err.Error())
-		syscall.Close(s.NotifyFdW)
-		return err
-	}
+	/*
+		err = pollFd.Add(s.NotifyFdW, aio.Out|aio.Err)
+		if err != nil {
+			log.Infof("IoThread  EpollAddFd NotifyFd failed,err=%s", err.Error())
+			syscall.Close(s.NotifyFdW)
+			return err
+		}
+	*/
 
 	go func() {
 		lastNotify := time.Now()
@@ -81,7 +81,7 @@ func (s *IoThread) Start() error {
 
 			nEvents, err := pollFd.Wait(time.Duration(ts) * time.Millisecond)
 			if err != nil {
-				log.Println("IoThread EpollWait failed,err=%s", err.Error())
+				log.Infof("IoThread EpollWait failed,err=%s", err.Error())
 				continue
 			}
 
@@ -93,7 +93,7 @@ func (s *IoThread) Start() error {
 			for i := 0; i < len(nEvents); i++ {
 				fd := int(nEvents[i].Fd)
 				if fd > s.Owner.MaxSocketNum {
-					log.Println("IoThread EpollWait invalid fd:%d", fd)
+					log.Infof("IoThread EpollWait invalid fd:%d", fd)
 					continue
 				}
 
@@ -101,24 +101,27 @@ func (s *IoThread) Start() error {
 				if fd == s.NotifyFdR {
 					_, err := syscall.Read(s.NotifyFdR, s.NotifyReadBytes[:])
 					if err != nil {
-						log.Println("NotifyFd Read,err:%s", err.Error())
+						log.Infof("NotifyFd Read,err:%s", err.Error())
 						continue
 					}
 					b_handle_notify = true
+					log.Infof("NotifyFdR fd")
 					continue
 				}
 
 				if nEvents[i].Flags&aio.Err > 0 {
-					log.Println("IoThread EpollWait EPOLLERR")
+					log.Infof("IoThread EpollWait Err")
 					s.closeConn(fd)
 					continue
 				}
 
 				if nEvents[i].Flags&aio.In > 0 {
+					log.Infof("IoThread EpollWait In")
 					s.handleRead(fd)
 				}
 
 				if nEvents[i].Flags&aio.Out > 0 {
+					log.Infof("IoThread EpollWait Out")
 					s.handleWrite(fd)
 				}
 			}
@@ -134,36 +137,35 @@ func (s *IoThread) Start() error {
 func (s *IoThread) handleRead(fd int) error {
 	connInfo := s.Owner.ConnList[fd]
 	if connInfo == nil {
-		log.Println("IoThread HandleRead already closed,fd=%d", fd)
+		log.Infof("IoThread HandleRead already closed,fd=%d", fd)
 
 		return errors.New("HandleRead closed")
 	}
-	//connInfo.SInfo.LastAccessTime = time.Now().Unix()
 
-	//tmp := make([]byte, ReadBufferLen)
 	connInfo.SInfo.UpdateAccessTime()
 
 	n, err := syscall.Read(fd, s.ReadTmpBuffer)
-	if err != nil || n < 0 { //看看EAGAIN会返回啥
-		log.Println("HandleRead Read error,fd=%d,socket=%+v", fd, connInfo.SInfo)
+	//看看EAGAIN会返回什么
+	if err != nil || n < 0 {
+		log.Infof("HandleRead Read error,fd=%d,socket=%+v", fd, connInfo.SInfo)
 		s.closeConn(fd)
 		return errors.New("Read error")
 	}
 
 	//对端关闭，并且发送缓冲区无数据
 	if n == 0 {
-		log.Println("HandleRead close by peer,fd=%d,socket=%+v", fd, connInfo.SInfo)
+		log.Infof("HandleRead close by peer,fd=%d,socket=%+v", fd, connInfo.SInfo)
 		s.closeConn(fd)
 		return nil
 	}
 	if n > global.READ_BUFFER_LEN {
-		log.Println("HandleRead read too much,n:%d", n)
+		log.Infof("HandleRead read too much,n:%d", n)
 		//panic("HandleRead read too much")
 		return errors.New("read too much")
 	}
 
 	recv_msg := s.ReadTmpBuffer[0:n]
-	//log.Println("HandleRead read msg:%#v", recv_msg)
+	//log.Infof("HandleRead read msg:%#v", recv_msg)
 
 	connInfo.SInfo.ReadBuffer.Write(recv_msg)
 
@@ -172,34 +174,34 @@ func (s *IoThread) handleRead(fd int) error {
 		whole_msg = connInfo.SInfo.ReadBuffer.Bytes()
 		ok, packlen := s.Owner.Parser.Unpack(whole_msg, connInfo)
 		if !ok {
-			log.Println("HandleRead Unpack failed,whole_msg:%#v", whole_msg)
+			log.Infof("HandleRead Unpack failed,whole_msg:%#v", whole_msg)
 			s.closeConn(fd)
 			return errors.New("Read error")
 		}
 		if packlen == 0 {
-			log.Println("HandleRead incomplete pack,,whole_msg:%#v", whole_msg)
+			log.Infof("HandleRead incomplete pack,,whole_msg:%#v", whole_msg)
 			break
 		}
 
 		if packlen > global.MAX_PACK_LEN {
-			log.Println("HandleRead invalid packlen:%d", packlen)
+			log.Infof("HandleRead invalid packlen:%d", packlen)
 			s.closeConn(fd)
 			return errors.New("invalid packlen")
 		}
 
 		if packlen > connInfo.SInfo.ReadBuffer.Len() {
-			log.Println("HandleRead need more,packlen:%d,current len:%d", packlen, connInfo.SInfo.ReadBuffer.Len())
+			log.Infof("HandleRead need more,packlen:%d,current len:%d", packlen, connInfo.SInfo.ReadBuffer.Len())
 			break
 		}
 		pack := connInfo.SInfo.ReadBuffer.Next(packlen)
 		if !s.Owner.Parser.HandlePack(pack, connInfo) {
-			log.Println("HandleRead HandlePack failed,pack:%#v", pack)
+			log.Infof("HandleRead HandlePack failed,pack:%#v", pack)
 			s.closeConn(fd)
 			return errors.New("HandlePack failed")
 		}
-		//log.Println("HandleRead HandlePack ok,pack:%#v", pack)
+		//log.Infof("HandleRead HandlePack ok,pack:%#v", pack)
 		if 0 == connInfo.SInfo.ReadBuffer.Len() {
-			log.Println("HandleRead HandlePack finished")
+			log.Infof("HandleRead HandlePack finished")
 			break
 		}
 	}
@@ -212,26 +214,25 @@ func (s *IoThread) handleRead(fd int) error {
 func (s *IoThread) handleWrite(fd int) error {
 	connInfo := s.Owner.ConnList[fd]
 	if connInfo == nil {
-		log.Println("IoThread HandleWrite already closed,fd=%d", fd)
+		log.Infof("IoThread HandleWrite already closed,fd=%d", fd)
 		return errors.New("HandleWrite closed")
 	}
-	//connInfo.SInfo.LastAccessTime = time.Now().Unix()
 
 	connInfo.SInfo.UpdateAccessTime()
 
 	writeBuffLen := connInfo.SInfo.WriteBuffer.Len()
 	if writeBuffLen == 0 {
-		log.Println("HandleWrite no data to write")
+		log.Infof("HandleWrite no data to write")
 		return nil
 	}
 
 	connInfo.SInfo.WriteMutex.Lock()
 	defer connInfo.SInfo.WriteMutex.Unlock()
-	writeBuffLen = connInfo.SInfo.WriteBuffer.Len() //重新取一遍
+	writeBuffLen = connInfo.SInfo.WriteBuffer.Len()
 
 	n, err := syscall.Write(fd, connInfo.SInfo.WriteBuffer.Bytes())
 	if err != nil || n < 0 { //看看EAGAIN会返回啥
-		log.Println("HandleWrite Write error,fd=%d,addr=%s", fd, connInfo.SInfo.Addr)
+		log.Infof("HandleWrite Write error,fd=%d,addr=%s", fd, connInfo.SInfo.Addr)
 		s.closeConn(fd)
 		return errors.New("Write error")
 	}
@@ -240,13 +241,13 @@ func (s *IoThread) handleWrite(fd int) error {
 		//已发完，取消 EPOLLOUT事件
 		err := aio.Poller(s.EpollFd).Add(fd, aio.In|aio.Err)
 		if err != nil {
-			log.Println("HandleWrite EpollModFd failed,fd=%d,err=%s", fd, err.Error())
+			log.Infof("HandleWrite EpollModFd failed,fd=%d,err=%s", fd, err.Error())
 			s.closeConn(fd)
 			return errors.New("HandleWrite EpollModFd failed")
 		}
 		connInfo.SInfo.WriteBuffer.Reset()
 		//s.Owner.Parser.WriteFinishCb(connInfo)
-		//log.Println("HandleWrite Reset WriteBuffer,Cap=%d", connInfo.SInfo.WriteBuffer.Cap())
+		//log.Infof("HandleWrite Reset WriteBuffer,Cap=%d", connInfo.SInfo.WriteBuffer.Cap())
 	} else {
 		//修改WriteBuffer的偏移
 		connInfo.SInfo.WriteBuffer.Next(n)
@@ -263,7 +264,7 @@ func (s *IoThread) tryWrite(fd int) error {
 func (s *IoThread) closeConn(fd int) error {
 	c := s.Owner.ConnList[fd]
 	if c == nil {
-		log.Println("CloseConn already closed,fd=%d", fd)
+		log.Infof("CloseConn already closed,fd=%d", fd)
 		return nil
 	}
 
@@ -274,7 +275,7 @@ func (s *IoThread) closeConn(fd int) error {
 	aio.Poller(s.EpollFd).Delete(fd)
 	syscall.Close(fd)
 	s.Owner.ConnList[fd] = nil
-	log.Println("CloseConn ok,SocketInfo:%+v", c.SInfo)
+	log.Infof("CloseConn ok,SocketInfo:%+v", c.SInfo)
 	return nil
 }
 
@@ -290,17 +291,17 @@ func (s *IoThread) checkTimeoutFds() {
 
 		c := s.Owner.ConnList[index]
 		if c == nil {
-			//log.Println("checkTimeoutFds CloseConn already closed,fd=%d", fd)
+			//log.Infof("checkTimeoutFds CloseConn already closed,fd=%d", fd)
 			continue
 		}
 
 		if cur >= c.SInfo.LastAccessTime+int64(s.Owner.TimeoutTs) {
-			log.Println("checkTimeoutFds ok,fd:%d,cur:%d,c.SInfo:%+v", index, cur, c.SInfo)
+			log.Infof("checkTimeoutFds ok,fd:%d,cur:%d,c.SInfo:%+v", index, cur, c.SInfo)
 			s.closeConn(index)
 		}
 
 	}
-	//log.Println("checkTimeoutFds finished")
+	//log.Infof("checkTimeoutFds finished")
 }
 
 //异步场景下检查socket唯一id是否匹配
@@ -317,7 +318,7 @@ func (s *IoThread) CloseDirect(fd int) error {
 func (s *IoThread) WriteDirect(fd int, msg []byte) error {
 	n, err := syscall.Write(fd, msg)
 	if err != nil || n < 0 { //看看EAGAIN会返回啥
-		log.Println("WriteDirect error,fd=%d,msg=%s", fd, string(msg))
+		log.Infof("WriteDirect error,fd=%d,msg=%s", fd, string(msg))
 		s.closeConn(fd)
 		return errors.New("Write error")
 	}

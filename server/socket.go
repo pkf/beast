@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"log"
 	"sync"
 	"syscall"
 	"time"
@@ -25,7 +24,7 @@ func (s *SocketInfo) AddMsgToWriteBuffer(msg []byte) bool {
 	nWrite, err := s.WriteBuffer.Write(msg)
 	s.WriteMutex.Unlock()
 	if nWrite != len(msg) || err != nil {
-		log.Println("SocketInfo AddMsgToWriteBuffer Write Buffer failed,s=%+v", s)
+		log.Infof("SocketInfo AddMsgToWriteBuffer Write Buffer failed,s=%+v", s)
 		//s.closeConn(fd)
 		return false
 	}

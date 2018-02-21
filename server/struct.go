@@ -1,10 +1,13 @@
 package server
 
 import (
+	"beast/util"
 	"bytes"
 	"sync"
 	"syscall"
 )
+
+var log = util.Log
 
 type SocketInfo struct {
 	Fd             int
