@@ -3,20 +3,23 @@ package util
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
+	_ "fmt"
 )
 
-//php -r 'echo printf("%b", pack("n", 89));'
+//php -r 'echo var_dump(pack("n", 97));'
 func Packn(i int) string {
 	buf := new(bytes.Buffer)
 	byteOrder := binary.BigEndian
 
 	binary.Write(buf, byteOrder, uint16(i))
-	//fmt.Printf("uint32: %x\n", buf.Bytes())
 
+	//fmt.Printf("pack: %v\n", string(buf.Bytes()))
+	//fmt.Printf("pack: %v\n", len(string(buf.Bytes())))
 	return string(buf.Bytes())
 }
 
-//php -r 'echo printf("%b", pack("xxxxN", 89));'
+//php -r 'echo var_dump(pack("xxxxN", 97));'
 func PackxxxxN(i int) string {
 	buf := new(bytes.Buffer)
 	byteOrder := binary.BigEndian
@@ -24,20 +27,33 @@ func PackxxxxN(i int) string {
 	binary.Write(buf, byteOrder, "\\0")
 	binary.Write(buf, byteOrder, "\\0")
 	binary.Write(buf, byteOrder, "\\0")
-	//binary.Write(buf, byteOrder, uint8(0))
+	/*
+		var data = []interface{}{
+			uint8(0),
+			uint8(0),
+		    uint8(0),
+		    uint8(0),
+		    uint32(i),
+		}
+	*/
 	binary.Write(buf, byteOrder, uint32(i))
-	//fmt.Printf("uint32: %x\n", buf.Bytes())
 
+	//fmt.Printf("pack: %v\n", string(buf.Bytes()))
+	//fmt.Printf("pack: %v\n", len(string(buf.Bytes())))
 	return string(buf.Bytes())
 }
 
-func PackH(i int) string {
-	buf := new(bytes.Buffer)
-	byteOrder := binary.BigEndian
-	binary.Write(buf, byteOrder, "\\0")
+//php -r 'echo var_dump(pack("H*", "6578616d706c65206865782064617461"));'
+//php -r 'echo var_dump(hex2bin("6578616d706c65206865782064617461"));'
+//see https://github.com/imroc/biu
+func PackH(s string) string {
+	//buf := new(bytes.Buffer)
+	//byteOrder := binary.BigEndian
+	//str:= hex.EncodeToString([]byte(s))
+	//binary.Write(buf, byteOrder, []byte(str))
+	//binary.Write(buf, byteOrder, string("6578616d706c65206865782064617461"))
 
-	binary.Write(buf, byteOrder, uint32(i))
-	//fmt.Printf("uint32: %x\n", buf.Bytes())
+	a, _ := hex.DecodeString(s)
 
-	return string(buf.Bytes())
+	return string(a)
 }

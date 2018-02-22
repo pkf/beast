@@ -6,7 +6,6 @@ import (
 	"beast/util"
 	"bytes"
 	"encoding/base64"
-	_ "log"
 	"net/url"
 	"regexp"
 	"strings"
@@ -320,9 +319,7 @@ func decode(msg []byte, c *ConnInfo) string {
 //see https://github.com/walkor/Workerman/blob/master/Protocols/Websocket.php
 func dealHandshake(msg []byte, c *ConnInfo) int {
 	buffer := string(msg)
-	// HTTP protocol.
 	if 0 == strings.Index(buffer, "GET") {
-		// Find \r\n\r\n.
 		heder_end_pos := strings.Index(buffer, "\r\n\r\n")
 		if heder_end_pos < 0 {
 			return 0

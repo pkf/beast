@@ -22,15 +22,17 @@ func TestHumanSize(t *testing.T) {
 }
 
 func TestRuntimeStats(t *testing.T) {
-	go RuntimeStats(time.Second, nil)
-	go func() {
-		for {
-			m := make(map[string]int)
-			for i := 0; i < 1000; i++ {
-				m[strconv.Itoa(i)] = i
+	if false {
+		go RuntimeStats(time.Second, nil)
+		go func() {
+			for {
+				m := make(map[string]int)
+				for i := 0; i < 1000; i++ {
+					m[strconv.Itoa(i)] = i
+				}
+				time.Sleep(10 * time.Millisecond)
 			}
-			time.Sleep(10 * time.Millisecond)
-		}
-	}()
-	time.Sleep(10 * time.Second)
+		}()
+		time.Sleep(10 * time.Second)
+	}
 }
