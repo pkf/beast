@@ -20,10 +20,22 @@ func Packn(i int) string {
 func PackxxxxN(i int) string {
 	buf := new(bytes.Buffer)
 	byteOrder := binary.BigEndian
-	binary.Write(buf, byteOrder, uint8(0))
-	binary.Write(buf, byteOrder, uint8(0))
-	binary.Write(buf, byteOrder, uint8(0))
-	binary.Write(buf, byteOrder, uint8(0))
+	binary.Write(buf, byteOrder, "\\0")
+	binary.Write(buf, byteOrder, "\\0")
+	binary.Write(buf, byteOrder, "\\0")
+	binary.Write(buf, byteOrder, "\\0")
+	//binary.Write(buf, byteOrder, uint8(0))
+	binary.Write(buf, byteOrder, uint32(i))
+	//fmt.Printf("uint32: %x\n", buf.Bytes())
+
+	return string(buf.Bytes())
+}
+
+func PackH(i int) string {
+	buf := new(bytes.Buffer)
+	byteOrder := binary.BigEndian
+	binary.Write(buf, byteOrder, "\\0")
+
 	binary.Write(buf, byteOrder, uint32(i))
 	//fmt.Printf("uint32: %x\n", buf.Bytes())
 

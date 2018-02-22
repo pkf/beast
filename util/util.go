@@ -47,3 +47,8 @@ func Sha1(data string) string {
 	ret := fmt.Sprintf("%b", t.Sum(nil))
 	return ret
 }
+
+func Ord(b byte) rune {
+	r := []rune(string(b))
+	return r[0]
+}
