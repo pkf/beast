@@ -41,6 +41,81 @@ func (p *WebSocketParser) HandlePack(msg []byte, c *ConnInfo) (ok bool) {
 }
 */
 
+func encode(msg []byte, c *ConnInfo) string {
+	buffer := string(msg)
+	length := len(buffer)
+	//if (empty(connection->websocketType)) {
+	//connection->websocketType = static::BINARY_TYPE_BLOB;
+	//}
+
+	first_byte := BINARY_TYPE_BLOB
+	var encode_buffer string
+	if length <= 125 {
+		encode_buffer = string(first_byte) + string(length) + buffer
+	} else {
+		if length <= 65535 {
+			encode_buffer = string(first_byte) + string(126) + util.Packn(length) + buffer
+		} else {
+			encode_buffer = string(first_byte) + string(127) + util.PackxxxxN(length) + buffer
+		}
+	}
+
+	//Handshake not completed so temporary buffer websocket data waiting for send.
+	//if (empty(connection->websocketHandshake)) {
+	//    if (empty(connection->tmpWebsocketData)) {
+	//        connection->tmpWebsocketData = '';
+	//     }
+
+	//    connection->tmpWebsocketData .= encode_buffer;
+
+	//    Return empty string.
+	//    return '';
+	//}
+
+	return encode_buffer
+}
+
+func decode(msg []byte, c *ConnInfo) string {
+	buffer := string(msg)
+	var masks string
+	var data string
+	b := []rune(string(buffer[1]))
+	len := b[0] & 127
+	if len == 126 {
+		masks = buffer[4:8]
+		data = buffer[8:]
+	} else {
+		if len == 127 {
+			masks = buffer[10:14]
+			data = buffer[14:]
+		} else {
+			masks = buffer[2:6]
+			data = buffer[6:]
+		}
+	}
+	buf := bytes.Buffer{}
+	for index, v := range data {
+		m := []rune(string(masks[index%4]))
+		tmp := v ^ m[0]
+		buf.WriteString(string(tmp))
+
+	}
+	decoded := buf.String()
+	/*
+	   if (connection->websocketCurrentFrameLength) {
+	       connection->websocketDataBuffer .= decoded;
+	       return connection->websocketDataBuffer;
+	   } else {
+	       if (connection->websocketDataBuffer !== '') {
+	           decoded                         = connection->websocketDataBuffer . decoded;
+	           connection->websocketDataBuffer = '';
+	       }
+	       return decoded;
+	   }
+	*/
+	return decoded
+}
+
 //see https://github.com/walkor/Workerman/blob/master/Protocols/Websocket.php
 func dealHandshake(msg []byte, c *ConnInfo) int {
 	buffer := string(msg)
