@@ -2,9 +2,11 @@ package util
 
 import (
 	"crypto/md5"
+	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -37,4 +39,11 @@ func Md5(data []byte) string {
 	h.Write(data)
 	key := hex.EncodeToString(h.Sum(nil))
 	return key
+}
+
+func Sha1(data string) string {
+	t := sha1.New()
+	io.WriteString(t, data)
+	ret := fmt.Sprintf("%b", t.Sum(nil))
+	return ret
 }

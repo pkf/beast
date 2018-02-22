@@ -1,9 +1,13 @@
 package protocol
 
 import (
-	_ "beast/server"
+	. "beast/server"
+	"beast/util"
+	"bytes"
+	"encoding/base64"
 	_ "log"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -36,6 +40,89 @@ func (p *WebSocketParser) HandlePack(msg []byte, c *ConnInfo) (ok bool) {
 	return true
 }
 */
+
+//see https://github.com/walkor/Workerman/blob/master/Protocols/Websocket.php
+func dealHandshake(msg []byte, c *ConnInfo) int {
+	buffer := string(msg)
+	// HTTP protocol.
+	if 0 == strings.Index(buffer, "GET") {
+		// Find \r\n\r\n.
+		heder_end_pos := strings.Index(buffer, "\r\n\r\n")
+		if heder_end_pos < 0 {
+			return 0
+		}
+		header_length := heder_end_pos + 4
+
+		// Get Sec-WebSocket-Key.
+		Sec_WebSocket_Key := ""
+		var match = regexp.MustCompile("Sec-WebSocket-Key: *(.*?)\r\n")
+		tmp := match.FindAllStringSubmatch(buffer, -1)
+		if nil != tmp {
+			Sec_WebSocket_Key = tmp[0][1]
+
+		} else {
+			msg := "HTTP/1.1 400 Bad Request\r\n\r\n<b>400 Bad Request</b><br>Sec-WebSocket-Key not found.<br>This is a WebSocket service and can not be accessed via HTTP."
+			c.AsynSendMsg([]byte(msg))
+			c.AsynClose()
+			return 0
+		}
+
+		// Calculation websocket key.
+		new_key := base64.StdEncoding.EncodeToString([]byte(util.Sha1(Sec_WebSocket_Key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")))
+		buf := bytes.Buffer{}
+		// Handshake response data.
+		buf.WriteString("HTTP/1.1 101 Switching Protocols\r\n")
+		buf.WriteString("Upgrade: websocket\r\n")
+		buf.WriteString("Sec-WebSocket-Version: 13\r\n")
+		buf.WriteString("Connection: Upgrade\r\n")
+		buf.WriteString("Server: beast/1.0\r\n")
+		buf.WriteString("Sec-WebSocket-Accept: " + new_key + "\r\n\r\n")
+		handshake_message := buf.String()
+		// Mark handshake complete..
+		//connection->websocketHandshake = true;
+
+		// Websocket data buffer.
+		//connection->websocketDataBuffer = '';
+
+		// Current websocket frame length.
+		//connection->websocketCurrentFrameLength = 0;
+
+		// Current websocket frame data.
+		//connection->websocketCurrentFrameBuffer = '';
+
+		// Consume handshake data.
+		//connection->consumeRecvBuffer(header_length);
+
+		// Send handshake response.
+		c.AsynSendMsg([]byte(handshake_message))
+
+		// There are data waiting to be sent.
+		//if (!empty(connection->tmpWebsocketData)) {
+		//    connection->send(connection->tmpWebsocketData, true);
+		//    connection->tmpWebsocketData = '';
+		//}
+		// blob or arraybuffer
+		//if (empty(connection->websocketType)) {
+		//    connection->websocketType = static::BINARY_TYPE_BLOB;
+		//}
+		// Try to emit onWebSocketConnect callback.
+		if len(buffer) > header_length {
+			//return input(substr(buffer, header_length), c);
+		}
+		return 0
+	} else if 0 == strings.Index(buffer, "<polic") {
+		// Is flash policy-file-request.
+		policy_xml := "<?xml version=\"1.0\"?><cross-domain-policy><site-control permitted-cross-domain-policies=\"all\"/><allow-access-from domain=\"*\" to-ports=\"*\"/></cross-domain-policy>\\0"
+		c.AsynSendMsg([]byte(policy_xml))
+		//connection->consumeRecvBuffer(strlen(buffer));
+		return 0
+	}
+	// Bad websocket handshake request.
+	buf := "HTTP/1.1 400 Bad Request\r\n\r\n<b>400 Bad Request</b><br>Invalid handshake data for websocket."
+	c.AsynSendMsg([]byte(buf))
+	c.AsynClose()
+	return 0
+}
 
 func parseHttpHeader(content string) (server map[string]string, cookie, get map[string][]string) {
 	server = make(map[string]string)
@@ -85,5 +172,4 @@ func parseHttpHeader(content string) (server map[string]string, cookie, get map[
 
 	}
 	return server, cookie, get
-
 }
