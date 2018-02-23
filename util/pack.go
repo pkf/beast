@@ -57,3 +57,28 @@ func PackH(s string) string {
 
 	return string(a)
 }
+
+//php -r 'var_dump(unpack("nn/ntotal_length", "\x04\x00\xa0\x00"));'
+func Unpacknn(s string) (uint16, uint16) {
+	p := bytes.NewBuffer([]byte(s))
+	var v uint16
+	var n uint16
+	// 0: uint32
+	binary.Read(p, binary.BigEndian, &v)
+	binary.Read(p, binary.BigEndian, &n)
+
+	return v, n
+}
+
+//php -r 'var_dump(unpack("n/N2c", "\x04\x00\x04\x00\x04\x00\x04\x00\xa0\x00"));'
+func UnpacknN2c(s string) (uint16, uint32, uint32) {
+	p := bytes.NewBuffer([]byte(s))
+	var v uint16
+	var n uint32
+	var m uint32
+	// 0: uint32
+	binary.Read(p, binary.BigEndian, &v)
+	binary.Read(p, binary.BigEndian, &n)
+	binary.Read(p, binary.BigEndian, &m)
+	return v, n, m
+}

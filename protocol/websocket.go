@@ -190,6 +190,8 @@ func input(msg []byte, c *ConnInfo) int {
 			}
 			//pack     = unpack('nn/ntotal_len', buffer);
 			//data_len = pack['total_len'];
+			_, v := util.Unpacknn(buffer)
+			data_len = int32(v)
 		} else {
 			if data_len == 127 {
 				head_len = 14
@@ -198,6 +200,8 @@ func input(msg []byte, c *ConnInfo) int {
 				}
 				//arr      = unpack('n/N2c', buffer);
 				//data_len = arr['c1']*4294967296 + arr['c2'];
+				_, c1, c2 := util.UnpacknN2c(buffer)
+				data_len = int32(int(c1)*4294967296 + int(c2))
 			}
 		}
 		current_frame_length := head_len + int(data_len)
