@@ -3,6 +3,7 @@ package server
 import (
 	"beast/aio"
 	"beast/global"
+	"bytes"
 	"errors"
 	"syscall"
 )
@@ -33,11 +34,19 @@ func (this *IoThread) handleAcceptEvent(socketInfo *SocketInfo) error {
 	name := this.Server.Parser.Name()
 	var connInfo *ConnInfo
 	if name == "websocket" {
+		ext := new(WebSocket)
+		ext.WebsocketHandshake = false
+		ext.WebsocketDataBuffer = bytes.NewBuffer(make([]byte, 0))
+		ext.WebsocketCurrentFrameBuffer = bytes.NewBuffer(make([]byte, 0))
+		ext.TmpWebsocketData = bytes.NewBuffer(make([]byte, 0))
+
+		//log.Infof("websocket  WebsocketHandshake=%v", ext)
 		connInfo = &ConnInfo{
 			SocketInfo: socketInfo,
 			T:          this,
-			Ext:        new(WebSocket),
+			Ext:        ext,
 		}
+
 	} else {
 		connInfo = &ConnInfo{
 			SocketInfo: socketInfo,

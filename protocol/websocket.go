@@ -23,16 +23,8 @@ func (p *WebSocketParser) Name() string {
 }
 
 func (p *WebSocketParser) Unpack(msg []byte, c *ConnInfo) (ok bool, packlen int) {
-	//logging.Debug("HttpParser Unpack,msg:%#v",msg)
-	s := string(msg)
-	index := strings.Index(s, "\r\n\r\n")
-	if index == -1 {
-		util.Log.Infof("HttpParser not find end")
-		return true, 0
-	} else {
-		util.Log.Infof("HttpParser find end")
-		return true, index + 4
-	}
+	index := input(msg, c)
+	return true, index
 }
 
 func (p *WebSocketParser) HandlePack(msg []byte, c *ConnInfo) (ok bool) {
@@ -53,10 +45,11 @@ func input(msg []byte, c *ConnInfo) int {
 		return 0
 	}
 
+	ext, _ := c.Ext.(*WebSocket)
 	// Has not yet completed the handshake.
-	//if (empty(connection->websocketHandshake)) {
-	//return static::dealHandshake(buffer, connection);
-	//}
+	if ext.WebsocketHandshake != true {
+		return dealHandshake(msg, c)
+	}
 
 	// Buffer websocket frame data.
 	if true {
@@ -251,33 +244,34 @@ func input(msg []byte, c *ConnInfo) int {
 func encode(msg []byte, c *ConnInfo) string {
 	buffer := string(msg)
 	length := len(buffer)
-	//if (empty(connection->websocketType)) {
-	//connection->websocketType = static::BINARY_TYPE_BLOB;
-	//}
+	ext, _ := c.Ext.(*WebSocket)
+	if ext.WebsocketType == 0 {
+		ext.WebsocketType = BINARY_TYPE_BLOB
+	}
 
 	first_byte := BINARY_TYPE_BLOB
 	var encode_buffer string
 	if length <= 125 {
-		encode_buffer = string(first_byte) + string(length) + buffer
+		encode_buffer = string(first_byte) + string(rune(length)) + buffer
 	} else {
 		if length <= 65535 {
-			encode_buffer = string(first_byte) + string(126) + util.Packn(length) + buffer
+			encode_buffer = string(first_byte) + string(rune(126)) + util.Packn(length) + buffer
 		} else {
-			encode_buffer = string(first_byte) + string(127) + util.PackxxxxN(length) + buffer
+			encode_buffer = string(first_byte) + string(rune(127)) + util.PackxxxxN(length) + buffer
 		}
 	}
 
 	//Handshake not completed so temporary buffer websocket data waiting for send.
-	//if (empty(connection->websocketHandshake)) {
-	//    if (empty(connection->tmpWebsocketData)) {
-	//        connection->tmpWebsocketData = '';
-	//     }
+	if ext.WebsocketHandshake != true {
+		if ext.TmpWebsocketData.Len() == 0 {
+			ext.TmpWebsocketData.Reset()
+		}
 
-	//    connection->tmpWebsocketData .= encode_buffer;
+		ext.TmpWebsocketData.WriteString(encode_buffer)
 
-	//    Return empty string.
-	//    return '';
-	//}
+		//Return empty string.
+		return ""
+	}
 
 	return encode_buffer
 }
@@ -308,18 +302,19 @@ func decode(msg []byte, c *ConnInfo) string {
 
 	}
 	decoded := buf.String()
-	/*
-	   if (connection->websocketCurrentFrameLength) {
-	       connection->websocketDataBuffer .= decoded;
-	       return connection->websocketDataBuffer;
-	   } else {
-	       if (connection->websocketDataBuffer !== '') {
-	           decoded                         = connection->websocketDataBuffer . decoded;
-	           connection->websocketDataBuffer = '';
-	       }
-	       return decoded;
-	   }
-	*/
+
+	ext, _ := c.Ext.(*WebSocket)
+	if ext.WebsocketCurrentFrameLength > 0 {
+		ext.WebsocketDataBuffer.WriteString(decoded)
+		return ext.WebsocketDataBuffer.String()
+	} else {
+		if ext.WebsocketDataBuffer.Len() > 0 {
+			decoded = ext.WebsocketDataBuffer.String() + decoded
+			ext.WebsocketDataBuffer.Reset()
+		}
+		return decoded
+	}
+
 	return decoded
 }
 
@@ -359,33 +354,36 @@ func dealHandshake(msg []byte, c *ConnInfo) int {
 		buf.WriteString("Sec-WebSocket-Accept: " + new_key + "\r\n\r\n")
 		handshake_message := buf.String()
 		// Mark handshake complete..
-		//connection->websocketHandshake = true;
+		ext, _ := c.Ext.(*WebSocket)
+
+		//util.Log.Infof("websocket  dealHandshake=%v, %v", ext, ext.WebsocketDataBuffer)
+		ext.WebsocketHandshake = true
 
 		// Websocket data buffer.
-		//connection->websocketDataBuffer = '';
+		ext.WebsocketDataBuffer.Reset()
 
 		// Current websocket frame length.
-		//connection->websocketCurrentFrameLength = 0;
+		ext.WebsocketCurrentFrameLength = 0
 
 		// Current websocket frame data.
-		//connection->websocketCurrentFrameBuffer = '';
+		ext.WebsocketCurrentFrameBuffer.Reset()
 
 		// Consume handshake data.
-		//connection->consumeRecvBuffer(header_length);
+		c.ConsumeRecvBuffer(header_length)
 
 		// Send handshake response.
-		fmt.Println(handshake_message)
+		//fmt.Println(handshake_message)
 		c.AsynSendMsg([]byte(handshake_message))
 
 		// There are data waiting to be sent.
-		//if (!empty(connection->tmpWebsocketData)) {
-		//    connection->send(connection->tmpWebsocketData, true);
-		//    connection->tmpWebsocketData = '';
-		//}
+		if ext.TmpWebsocketData.Len() > 0 {
+			c.AsynSendMsg(ext.TmpWebsocketData.Bytes())
+			ext.TmpWebsocketData.Reset()
+		}
 		// blob or arraybuffer
-		//if (empty(connection->websocketType)) {
-		//    connection->websocketType = static::BINARY_TYPE_BLOB;
-		//}
+		if ext.WebsocketType == 0 {
+			ext.WebsocketType = BINARY_TYPE_BLOB
+		}
 		// Try to emit onWebSocketConnect callback.
 		if len(buffer) > header_length {
 			//return input(substr(buffer, header_length), c);
@@ -395,7 +393,7 @@ func dealHandshake(msg []byte, c *ConnInfo) int {
 		// Is flash policy-file-request.
 		policy_xml := "<?xml version=\"1.0\"?><cross-domain-policy><site-control permitted-cross-domain-policies=\"all\"/><allow-access-from domain=\"*\" to-ports=\"*\"/></cross-domain-policy>\\0"
 		c.AsynSendMsg([]byte(policy_xml))
-		//connection->consumeRecvBuffer(strlen(buffer));
+		c.ConsumeRecvBuffer(len(buffer))
 		return 0
 	}
 	// Bad websocket handshake request.
@@ -405,7 +403,7 @@ func dealHandshake(msg []byte, c *ConnInfo) int {
 	return 0
 }
 
-func ParseHttpHeader(content string) (server map[string]string, cookie, get map[string][]string) {
+func parseHttpHeader(content string) (server map[string]string, cookie, get map[string][]string) {
 	server = make(map[string]string)
 	cookie = make(map[string][]string)
 	get = make(map[string][]string)

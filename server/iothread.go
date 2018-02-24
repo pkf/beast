@@ -176,7 +176,7 @@ func (this *IoThread) handleRead(fd int) error {
 			return errors.New("Read error")
 		}
 		if packlen == 0 {
-			log.Infof("HandleRead incomplete pack,,whole_msg:%#v", whole_msg)
+			//log.Infof("HandleRead incomplete pack,,whole_msg:%#v", whole_msg)
 			break
 		}
 
