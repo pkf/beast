@@ -6,6 +6,7 @@ import (
 	"beast/util"
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
@@ -345,7 +346,7 @@ func dealHandshake(msg []byte, c *ConnInfo) int {
 		}
 
 		// Calculation websocket key.
-		new_key := base64.StdEncoding.EncodeToString([]byte(util.Sha1(Sec_WebSocket_Key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")))
+		new_key := base64.URLEncoding.EncodeToString([]byte(util.Sha1(Sec_WebSocket_Key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")))
 		buf := bytes.Buffer{}
 		// Handshake response data.
 		buf.WriteString("HTTP/1.1 101 Switching Protocols\r\n")
@@ -371,6 +372,7 @@ func dealHandshake(msg []byte, c *ConnInfo) int {
 		//connection->consumeRecvBuffer(header_length);
 
 		// Send handshake response.
+		fmt.Println(handshake_message)
 		c.AsynSendMsg([]byte(handshake_message))
 
 		// There are data waiting to be sent.
@@ -401,7 +403,7 @@ func dealHandshake(msg []byte, c *ConnInfo) int {
 	return 0
 }
 
-func parseHttpHeader(content string) (server map[string]string, cookie, get map[string][]string) {
+func ParseHttpHeader(content string) (server map[string]string, cookie, get map[string][]string) {
 	server = make(map[string]string)
 	cookie = make(map[string][]string)
 	get = make(map[string][]string)
@@ -409,7 +411,9 @@ func parseHttpHeader(content string) (server map[string]string, cookie, get map[
 	lines := strings.Split(content, "\r\n\r\n")
 	httpHeader := lines[0]
 	headerData := strings.Split(httpHeader, "\r\n")
+
 	tmp := strings.Split(headerData[0], " ")
+	fmt.Printf("%v \n", headerData)
 	server["REQUEST_METHOD"] = strings.TrimSpace(tmp[0])
 	server["REQUEST_URI"] = strings.TrimSpace(tmp[1])
 	server["SERVER_PROTOCOL"] = strings.TrimSpace(tmp[2])
@@ -430,7 +434,7 @@ func parseHttpHeader(content string) (server map[string]string, cookie, get map[
 		case "HOST":
 			tmp = strings.Split(value, ":")
 			server["SERVER_NAME"] = tmp[0]
-			if len(tmp[0]) > 0 {
+			if len(tmp) > 1 {
 				server["SERVER_PORT"] = tmp[1]
 			}
 		case "COOKIE":

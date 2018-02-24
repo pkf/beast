@@ -1,6 +1,7 @@
 package global
 
 import (
+	_ "beast/util"
 	"encoding/json"
 	_ "fmt"
 	"os"
@@ -9,8 +10,8 @@ import (
 var Config = Configuration{}
 
 func init() {
-	Config, _ = LoadConfig("config/online.json")
-	//Config = config
+	//dir:= util.GetCurrentPath()
+	//Config, _ = LoadConfig(dir+ "config/online.json")
 }
 
 func LoadConfig(filename string) (Configuration, error) {
