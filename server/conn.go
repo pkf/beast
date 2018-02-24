@@ -30,3 +30,12 @@ func (this *ConnInfo) AsynClose() {
 	log.Infof("ConnInfo Close,c:%+v", this)
 	this.T.Notify(global.EVENT_CLOSE, this.SocketInfo)
 }
+
+func (this *ConnInfo) ConsumeRecvBuffer(length int) {
+	currentLength := this.SocketInfo.ReadBuffer.Len()
+	if length > currentLength {
+		this.SocketInfo.ReadBuffer.Next(currentLength)
+	} else {
+		this.SocketInfo.ReadBuffer.Next(length)
+	}
+}

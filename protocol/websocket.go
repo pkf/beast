@@ -18,16 +18,19 @@ const BINARY_TYPE_ARRAYBUFFER = 0x82
 type WebSocketParser struct {
 }
 
-/*
+func (p *WebSocketParser) Name() string {
+	return "websocket"
+}
+
 func (p *WebSocketParser) Unpack(msg []byte, c *ConnInfo) (ok bool, packlen int) {
 	//logging.Debug("HttpParser Unpack,msg:%#v",msg)
 	s := string(msg)
 	index := strings.Index(s, "\r\n\r\n")
 	if index == -1 {
-		log.Println("HttpParser not find end")
+		util.Log.Infof("HttpParser not find end")
 		return true, 0
 	} else {
-		log.Println("HttpParser find end")
+		util.Log.Infof("HttpParser find end")
 		return true, index + 4
 	}
 }
@@ -40,7 +43,6 @@ func (p *WebSocketParser) HandlePack(msg []byte, c *ConnInfo) (ok bool) {
 	//c.Close()
 	return true
 }
-*/
 
 func input(msg []byte, c *ConnInfo) int {
 	buffer := string(msg)

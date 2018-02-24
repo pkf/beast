@@ -9,6 +9,10 @@ import (
 type HttpParser struct {
 }
 
+func (p *HttpParser) Name() string {
+	return "http"
+}
+
 func (p *HttpParser) Unpack(msg []byte, c *ConnInfo) (ok bool, packlen int) {
 	//logging.Debug("HttpParser Unpack,msg:%#v",msg)
 	s := string(msg)

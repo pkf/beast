@@ -30,10 +30,20 @@ func (this *IoThread) handleAcceptEvent(socketInfo *SocketInfo) error {
 		syscall.Close(socketInfo.Fd)
 		return err
 	}
-
-	connInfo := &ConnInfo{
-		SocketInfo: socketInfo,
-		T:          this,
+	name := this.Server.Parser.Name()
+	var connInfo *ConnInfo
+	if name == "websocket" {
+		connInfo = &ConnInfo{
+			SocketInfo: socketInfo,
+			T:          this,
+			Ext:        new(WebSocket),
+		}
+	} else {
+		connInfo = &ConnInfo{
+			SocketInfo: socketInfo,
+			T:          this,
+			Ext:        nil,
+		}
 	}
 	this.Server.ConnList[socketInfo.Fd] = connInfo
 	return nil

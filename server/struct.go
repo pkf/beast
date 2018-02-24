@@ -57,6 +57,7 @@ type ConnInfo struct {
 	SocketInfo   *SocketInfo
 	BisinessInfo *BisinessInfo
 	T            *IoThread
+	Ext          interface{}
 }
 
 /*
@@ -67,5 +68,16 @@ HandlePack 用来处理业务包，参数中的msg是完整包
 type TcpParser interface {
 	Unpack(msg []byte, c *ConnInfo) (ok bool, packlen int)
 	HandlePack(msg []byte, c *ConnInfo) (ok bool)
+	Name() string
 	//WriteFinishCb(c *ConnInfo)
+}
+
+type WebSocket struct {
+	WebsocketHandshake          bool
+	WebsocketDataBuffer         *bytes.Buffer
+	WebsocketCurrentFrameLength int
+	WebsocketCurrentFrameBuffer *bytes.Buffer
+	TmpWebsocketData            *bytes.Buffer
+	WebsocketType               int
+	MaxSendBufferSize           int
 }

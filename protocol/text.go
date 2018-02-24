@@ -6,10 +6,14 @@ import (
 	"strings"
 )
 
-type SimpleParser struct {
+type TextParser struct {
 }
 
-func (p *SimpleParser) Unpack(msg []byte, c *ConnInfo) (ok bool, packlen int) {
+func (p *TextParser) Name() string {
+	return "text"
+}
+
+func (p *TextParser) Unpack(msg []byte, c *ConnInfo) (ok bool, packlen int) {
 	s := string(msg)
 	index := strings.Index(s, "\n")
 	if index == -1 {
@@ -21,7 +25,7 @@ func (p *SimpleParser) Unpack(msg []byte, c *ConnInfo) (ok bool, packlen int) {
 	}
 }
 
-func (p *SimpleParser) HandlePack(msg []byte, c *ConnInfo) (ok bool) {
+func (p *TextParser) HandlePack(msg []byte, c *ConnInfo) (ok bool) {
 	//c.SynSendMsg(msg)
 	c.AsynSendMsg(msg)
 	//c.AsynClose()
