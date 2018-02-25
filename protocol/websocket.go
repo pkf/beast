@@ -28,12 +28,11 @@ func (p *WebSocketParser) Unpack(msg []byte, c *ConnInfo) (ok bool, packlen int)
 }
 
 func (p *WebSocketParser) HandlePack(msg []byte, c *ConnInfo) (ok bool) {
-	util.Log.Infof("HttpParser HandlePack, msg:%s", string(msg))
+	//util.Log.Infof("HttpParser HandlePack, msg:%s", string(msg))
 	s := decode(msg, c)
 	util.Log.Infof("HandlePack %s", s)
 	r := encode([]byte("你好:"+s), c)
 	c.SynSendMsg(r)
-	//c.SynClose()
 	return true
 }
 
@@ -87,7 +86,6 @@ func input(msg []byte, c *ConnInfo) int {
 		case 0x9:
 			buf := util.PackH("8a00")
 			c.AsynSendMsg([]byte(buf))
-
 			// Consume data from receive buffer.
 			if int(data_len) < 0 {
 				if masked > 0 {
@@ -195,12 +193,10 @@ func encode(msg []byte, c *ConnInfo) []byte {
 		encode_buffer.WriteString(buffer)
 	} else {
 		if length <= 65535 {
-			//encode_buffer = string(first_byte) + string(rune(126)) + util.Packn(length) + buffer
 			encode_buffer.Write([]byte{byte(first_byte), byte(126)})
 			encode_buffer.WriteString(util.Packn(length))
 			encode_buffer.WriteString(buffer)
 		} else {
-			//encode_buffer = string(first_byte) + string(rune(127)) + util.PackxxxxN(length) + buffer
 			encode_buffer.Write([]byte{byte(first_byte), byte(127)})
 			encode_buffer.WriteString(util.PackxxxxN(length))
 			encode_buffer.WriteString(buffer)
@@ -310,7 +306,7 @@ func dealHandshake(msg []byte, c *ConnInfo) int {
 		// Mark handshake complete..
 		ext, _ := c.Ext.(*WebSocket)
 
-		//util.Log.Infof("websocket  dealHandshake=%v, %v", ext, ext.WebsocketDataBuffer)
+		//Bool
 		ext.WebsocketHandshake = true
 
 		// Websocket data buffer.
@@ -351,8 +347,8 @@ func dealHandshake(msg []byte, c *ConnInfo) int {
 		return 0
 	}
 	// Bad websocket handshake request.
-	buf := "HTTP/1.1 400 Bad Request\r\n\r\n<b>400 Bad Request</b><br>Invalid handshake data for websocket."
-	c.AsynSendMsg([]byte(buf))
+	bad := "HTTP/1.1 400 Bad Request\r\n\r\n<b>400 Bad Request</b><br>Invalid handshake data for websocket."
+	c.AsynSendMsg([]byte(bad))
 	c.AsynClose()
 	return 0
 }
