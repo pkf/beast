@@ -28,17 +28,20 @@ func (p *WebSocketParser) Unpack(msg []byte, c *ConnInfo) (ok bool, packlen int)
 }
 
 func (p *WebSocketParser) HandlePack(msg []byte, c *ConnInfo) (ok bool) {
-	//logging.Debug("HttpParser HandlePack,msg:%s",string(msg))
-	r := "HTTP/1.1 200 OK\r\nDate: Tue, 18 Jul 2017 09:49:30 GMT\r\nContent-Length: 4\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nabcd"
-	c.SynSendMsg([]byte(r))
-	c.SynClose()
-	//c.Close()
+	util.Log.Infof("HttpParser HandlePack, msg:%s", string(msg))
+	s := decode(msg, c)
+	util.Log.Infof("HandlePack %s", s)
+	r := encode([]byte("你好:"+s), c)
+	c.SynSendMsg(r)
+	//c.SynClose()
 	return true
 }
 
 func input(msg []byte, c *ConnInfo) int {
 	buffer := string(msg)
 	recv_len := len(buffer)
+	var current_frame_length int
+	var head_len int
 
 	// We need more data.
 	if recv_len < 2 {
@@ -52,17 +55,15 @@ func input(msg []byte, c *ConnInfo) int {
 	}
 
 	// Buffer websocket frame data.
-	if true {
-		/*
-		   if (connection->websocketCurrentFrameLength) {
-		       // We need more frame data.
-		       if (connection->websocketCurrentFrameLength > recv_len) {
-		           // Return 0, because it is not clear the full packet length, waiting for the frame of fin=1.
-		           return 0;
-		       }
-		*/
+	if ext.WebsocketCurrentFrameLength > 0 {
+		if ext.WebsocketCurrentFrameLength > 0 {
+			// We need more frame data.
+			if ext.WebsocketCurrentFrameLength > recv_len {
+				// Return 0, because it is not clear the full packet length, waiting for the frame of fin=1.
+				return 0
+			}
+		}
 	} else {
-		var head_len int
 		firstbyte := util.Ord(buffer[0])
 		secondbyte := util.Ord(buffer[1])
 		data_len := secondbyte & 127
@@ -80,81 +81,30 @@ func input(msg []byte, c *ConnInfo) int {
 			break
 		// Close package.
 		case 0x8:
-			// Try to emit onWebSocketClose callback.
-			/*
-			   if (isset(connection->onWebSocketClose) || isset(connection->worker->onWebSocketClose)) {
-			       try {
-			           call_user_func(isset(connection->onWebSocketClose)?connection->onWebSocketClose:connection->worker->onWebSocketClose, connection);
-			       } catch (\Exception e) {
-			           Worker::log(e);
-			           exit(250);
-			       } catch (\Error e) {
-			           Worker::log(e);
-			           exit(250);
-			       }
-			   } // Close connection.
-			   else {
-			       connection->close();
-			   }
-			*/
+			c.AsynClose()
 			return 0
 		// Ping package.
 		case 0x9:
-			// Try to emit onWebSocketPing callback.
-			if true {
-				/*
-				   if (isset(connection->onWebSocketPing) || isset(connection->worker->onWebSocketPing)) {
-				       try {
-				           call_user_func(isset(connection->onWebSocketPing)?connection->onWebSocketPing:connection->worker->onWebSocketPing, connection);
-				       } catch (\Exception e) {
-				           Worker::log(e);
-				           exit(250);
-				       } catch (\Error e) {
-				           Worker::log(e);
-				           exit(250);
-				       }
-				   } // Send pong package to client.
-				*/
-			} else {
-				//buf:= (pack('H*', '8a00'), true)
-				buf := ""
-				c.AsynSendMsg([]byte(buf))
-			}
+			buf := util.PackH("8a00")
+			c.AsynSendMsg([]byte(buf))
 
 			// Consume data from receive buffer.
 			if int(data_len) < 0 {
-
 				if masked > 0 {
 					head_len = 6
 				} else {
 					head_len = 6
 				}
 
-				/*
-				   connection->consumeRecvBuffer(head_len);
-				   if (recv_len > head_len) {
-				       return static::input(substr(buffer, head_len), connection);
-				   }
-				*/
+				c.ConsumeRecvBuffer(head_len)
+				if recv_len > head_len {
+					return input([]byte(buffer[head_len:]), c)
+				}
 				return 0
 			}
 			break
 		// Pong package.
 		case 0xa:
-			// Try to emit onWebSocketPong callback.
-			/*
-			   if (isset(connection->onWebSocketPong) || isset(connection->worker->onWebSocketPong)) {
-			       try {
-			           call_user_func(isset(connection->onWebSocketPong)?connection->onWebSocketPong:connection->worker->onWebSocketPong, connection);
-			       } catch (\Exception e) {
-			           Worker::log(e);
-			           exit(250);
-			       } catch (\Error e) {
-			           Worker::log(e);
-			           exit(250);
-			       }
-			   }
-			*/
 			//  Consume data from receive buffer.
 			if int(data_len) < 0 {
 				if masked > 0 {
@@ -162,17 +112,16 @@ func input(msg []byte, c *ConnInfo) int {
 				} else {
 					head_len = 6
 				}
-				/*
-				   connection->consumeRecvBuffer(head_len);
-				   if (recv_len > head_len) {
-				       return static::input(substr(buffer, head_len), connection);
-				   }*/
+
+				c.ConsumeRecvBuffer(head_len)
+				if recv_len > head_len {
+					return input([]byte(buffer[head_len:]), c)
+				}
 				return 0
 			}
 			break
 		// Wrong opcode.
 		default:
-			//echo "error opcode opcode and close websocket connection. Buffer:" . bin2hex(buffer) . "\n";
 			c.AsynClose()
 			return 0
 		}
@@ -184,8 +133,6 @@ func input(msg []byte, c *ConnInfo) int {
 			if head_len > recv_len {
 				return 0
 			}
-			//pack     = unpack('nn/ntotal_len', buffer);
-			//data_len = pack['total_len'];
 			_, v := util.Unpacknn(buffer)
 			data_len = int32(v)
 		} else {
@@ -194,18 +141,14 @@ func input(msg []byte, c *ConnInfo) int {
 				if head_len > recv_len {
 					return 0
 				}
-				//arr      = unpack('n/N2c', buffer);
-				//data_len = arr['c1']*4294967296 + arr['c2'];
 				_, c1, c2 := util.UnpacknN2c(buffer)
 				data_len = int32(int(c1)*4294967296 + int(c2))
 			}
 		}
-		current_frame_length := head_len + int(data_len)
+		current_frame_length = head_len + int(data_len)
 
-		//total_package_size = strlen(connection->websocketDataBuffer) + current_frame_length;
-		total_package_size := 0
+		total_package_size := ext.WebsocketDataBuffer.Len() + current_frame_length
 		if total_package_size > global.MAX_PACK_LEN {
-			//echo "error package. package_length=total_package_size\n";
 			c.AsynClose()
 			return 0
 		}
@@ -213,35 +156,31 @@ func input(msg []byte, c *ConnInfo) int {
 		if int(is_fin_frame) > 0 {
 			return current_frame_length
 		} else {
-			//connection->websocketCurrentFrameLength = current_frame_length;
+			ext.WebsocketCurrentFrameLength = current_frame_length
 		}
 	}
 
 	// Received just a frame length data.
-	/*
-	   if (connection->websocketCurrentFrameLength === recv_len) {
-	       static::decode(buffer, connection);
-	       connection->consumeRecvBuffer(connection->websocketCurrentFrameLength);
-	       connection->websocketCurrentFrameLength = 0;
-	       return 0;
-	   } // The length of the received data is greater than the length of a frame.
-	   elseif (connection->websocketCurrentFrameLength < recv_len) {
-	       static::decode(substr(buffer, 0, connection->websocketCurrentFrameLength), connection);
-	       connection->consumeRecvBuffer(connection->websocketCurrentFrameLength);
-	       current_frame_length                    = connection->websocketCurrentFrameLength;
-	       connection->websocketCurrentFrameLength = 0;
-	       // Continue to read next frame.
-	       return static::input(substr(buffer, current_frame_length), connection);
-	   } // The length of the received data is less than the length of a frame.
-	   else {
-	*/
-	return 0
-	/*
-	   }
-	*/
+	if ext.WebsocketCurrentFrameLength == recv_len {
+		decode([]byte(buffer), c)
+		c.ConsumeRecvBuffer(ext.WebsocketCurrentFrameLength)
+		ext.WebsocketCurrentFrameLength = 0
+		return 0
+	} else if ext.WebsocketCurrentFrameLength < recv_len {
+		// The length of the received data is greater than the length of a frame.
+		decode([]byte(buffer[0:ext.WebsocketCurrentFrameLength]), c)
+		c.ConsumeRecvBuffer(ext.WebsocketCurrentFrameLength)
+		current_frame_length = ext.WebsocketCurrentFrameLength
+		ext.WebsocketCurrentFrameLength = 0
+		// Continue to read next frame.
+		return input([]byte(buffer[current_frame_length:]), c)
+	} else {
+		// The length of the received data is less than the length of a frame.
+		return 0
+	}
 }
 
-func encode(msg []byte, c *ConnInfo) string {
+func encode(msg []byte, c *ConnInfo) []byte {
 	buffer := string(msg)
 	length := len(buffer)
 	ext, _ := c.Ext.(*WebSocket)
@@ -250,14 +189,21 @@ func encode(msg []byte, c *ConnInfo) string {
 	}
 
 	first_byte := BINARY_TYPE_BLOB
-	var encode_buffer string
+	var encode_buffer = bytes.NewBuffer(make([]byte, 0))
 	if length <= 125 {
-		encode_buffer = string(first_byte) + string(rune(length)) + buffer
+		encode_buffer.Write([]byte{byte(first_byte), byte(length)})
+		encode_buffer.WriteString(buffer)
 	} else {
 		if length <= 65535 {
-			encode_buffer = string(first_byte) + string(rune(126)) + util.Packn(length) + buffer
+			//encode_buffer = string(first_byte) + string(rune(126)) + util.Packn(length) + buffer
+			encode_buffer.Write([]byte{byte(first_byte), byte(126)})
+			encode_buffer.WriteString(util.Packn(length))
+			encode_buffer.WriteString(buffer)
 		} else {
-			encode_buffer = string(first_byte) + string(rune(127)) + util.PackxxxxN(length) + buffer
+			//encode_buffer = string(first_byte) + string(rune(127)) + util.PackxxxxN(length) + buffer
+			encode_buffer.Write([]byte{byte(first_byte), byte(127)})
+			encode_buffer.WriteString(util.PackxxxxN(length))
+			encode_buffer.WriteString(buffer)
 		}
 	}
 
@@ -267,13 +213,13 @@ func encode(msg []byte, c *ConnInfo) string {
 			ext.TmpWebsocketData.Reset()
 		}
 
-		ext.TmpWebsocketData.WriteString(encode_buffer)
+		ext.TmpWebsocketData.Write(encode_buffer.Bytes())
 
 		//Return empty string.
-		return ""
+		return []byte{}
 	}
 
-	return encode_buffer
+	return encode_buffer.Bytes()
 }
 
 func decode(msg []byte, c *ConnInfo) string {
@@ -281,12 +227,13 @@ func decode(msg []byte, c *ConnInfo) string {
 	var masks string
 	var data string
 	b := []rune(string(buffer[1]))
-	len := b[0] & 127
-	if len == 126 {
+	length := b[0] & 127
+	util.Log.Infof("decode %v", length)
+	if length == 126 {
 		masks = buffer[4:8]
 		data = buffer[8:]
 	} else {
-		if len == 127 {
+		if length == 127 {
 			masks = buffer[10:14]
 			data = buffer[14:]
 		} else {
@@ -294,14 +241,21 @@ func decode(msg []byte, c *ConnInfo) string {
 			data = buffer[6:]
 		}
 	}
-	buf := bytes.Buffer{}
-	for index, v := range data {
-		m := []rune(string(masks[index%4]))
-		tmp := v ^ m[0]
-		buf.WriteString(string(tmp))
 
+	dataBuffer := []byte(data)
+	masksBuffer := []byte(masks)
+	dataLen := len(data)
+	masksLen := len(masks)
+	buf := make([]byte, dataLen)
+	for i := 0; i < dataLen; i++ {
+		if masksLen > 0 {
+			buf[i] = dataBuffer[i] ^ masksBuffer[i%4]
+		} else {
+			buf[i] = dataBuffer[i]
+		}
 	}
-	decoded := buf.String()
+
+	decoded := string(buf)
 
 	ext, _ := c.Ext.(*WebSocket)
 	if ext.WebsocketCurrentFrameLength > 0 {
@@ -315,7 +269,7 @@ func decode(msg []byte, c *ConnInfo) string {
 		return decoded
 	}
 
-	return decoded
+	return ""
 }
 
 //see https://github.com/walkor/Workerman/blob/master/Protocols/Websocket.php
@@ -336,14 +290,14 @@ func dealHandshake(msg []byte, c *ConnInfo) int {
 			Sec_WebSocket_Key = tmp[0][1]
 
 		} else {
-			msg := "HTTP/1.1 400 Bad Request\r\n\r\n<b>400 Bad Request</b><br>Sec-WebSocket-Key not found.<br>This is a WebSocket service and can not be accessed via HTTP."
-			c.AsynSendMsg([]byte(msg))
+			message := "HTTP/1.1 400 Bad Request\r\n\r\n<b>400 Bad Request</b><br>Sec-WebSocket-Key not found.<br>This is a WebSocket service and can not be accessed via HTTP."
+			c.AsynSendMsg([]byte(message))
 			c.AsynClose()
 			return 0
 		}
 
 		// Calculation websocket key.
-		new_key := base64.URLEncoding.EncodeToString([]byte(util.Sha1(Sec_WebSocket_Key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")))
+		new_key := base64.StdEncoding.EncodeToString([]byte(util.Sha1(Sec_WebSocket_Key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")))
 		buf := bytes.Buffer{}
 		// Handshake response data.
 		buf.WriteString("HTTP/1.1 101 Switching Protocols\r\n")
